@@ -44,7 +44,20 @@ Your IDE agent loads these files and executes each step — no SDK, no framework
 npm install -g agentfile
 ```
 
-### 2. Scaffold a project
+### 2. Configure (optional)
+
+```bash
+# Save your API key once
+agentfile config set api-key your-anthropic-api-key
+
+# Set default shell (optional - auto-detected by OS)
+agentfile config set shell pwsh  # or bash
+
+# View current configuration
+agentfile config
+```
+
+### 3. Scaffold a project
 
 ```bash
 mkdir my-project && cd my-project
@@ -52,7 +65,7 @@ agentfile init
 agentfile create code-reviewer
 ```
 
-### 3. Open in your IDE agent
+### 4. Open in your IDE agent
 
 **Cursor / Windsurf** — paste into composer or your rules file:
 
@@ -70,7 +83,12 @@ claude "Follow workflow.yaml in this folder. Input: src/auth.js"
 
 **Cline / Roo / GitHub Copilot** — reference `workflow.yaml` in your system prompt or workspace instructions.
 
-That's it. Your IDE agent handles the rest.
+### 5. Run with CLI (optional)
+
+```bash
+agentfile run code-reviewer --input "path/to/code.js"
+# API key automatically loaded from config
+```
 
 ---
 
@@ -115,8 +133,29 @@ steps:
 |---------|-------------|
 | `agentfile init` | Scaffold a new Agentfile project in the current directory |
 | `agentfile create <name>` | Create a new workflow |
+| `agentfile run <name>` | Run a workflow by name |
 | `agentfile list` | List all workflows in the current project |
 | `agentfile validate [name]` | Validate workflow(s) against the spec |
+| `agentfile config` | Manage configuration (API keys, default model, shell) |
+
+### Configuration Management
+
+```bash
+# Show current configuration
+agentfile config
+
+# Set API key (saved for future use)
+agentfile config set api-key your-anthropic-api-key
+
+# Set default model
+agentfile config set model claude-sonnet-4-6
+
+# Set default shell (overrides OS auto-detection)
+agentfile config set shell pwsh  # or bash
+
+# Remove configuration
+agentfile config unset api-key
+```
 
 ---
 
@@ -151,16 +190,19 @@ agentfile/
   schema/
     workflow.schema.json           # JSON Schema (IDE autocomplete + validation)
   examples/
-    code-reviewer/                 # Example: code review workflow
-    pr-summarizer/                 # Example: PR summary workflow
+    hello-world/                 # Example: minimal workflow
+    code-reviewer/               # Example: code review workflow
+    pr-summarizer/               # Example: PR summary workflow
   workflows/
-    workflow-creator/              # Meta-workflow: generates new workflows
+    workflow-creator/            # Meta-workflow: generates new workflows
   shared/
-    AGENTS.md                      # Global agent rules
-    project.md                     # Project-level conventions
-  cli/                             # Node.js CLI source
+    AGENTS.md                    # Global agent rules
+    project.md                   # Project-level conventions
+  cli/                          # Node.js CLI source
   docs/
-    concepts.md                    # Deep dive: how everything works
+    concepts.md                  # Deep dive: how everything works
+  ~/.agentfile/
+    config.json                 # User configuration (API keys, defaults)
 ```
 
 ---
@@ -175,6 +217,15 @@ agentfile/
 | Claude Code | Pass `workflow.yaml` as task context |
 | Cline | Reference in system prompt |
 | Roo | Reference in system prompt |
+
+### Cross-Platform Execution
+
+- **Windows**: Auto-detects PowerShell with execution policy bypass
+- **macOS/Linux**: Uses bash by default
+- **CLI Runtime**: Requires `scripts/run.sh` and `scripts/run.ps1` 
+- **IDE Agents**: Execute steps directly (no scripts needed)
+
+Configure default shell with `agentfile config set shell <bash|pwsh>`
 
 ---
 
