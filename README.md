@@ -1,6 +1,6 @@
 # Agentfile
 
-**Define LLM workflows as files. Run them with any IDE agent.**
+**Agentfile is workflow-as-files for AI agents.**
 
 Agentfile is an open specification for describing AI-powered workflows as plain files — agents, skills, steps, and rules — that any IDE agent (Cursor, Windsurf, GitHub Copilot, Claude Code, Cline, Roo) can read and execute.
 
@@ -28,10 +28,11 @@ my-workflow/
   workflow.yaml       # Steps, goals, and routing logic
   agents/             # Agent personas and rules (.md files)
   skills/             # Reusable instruction sets (.md files)
+  scripts/            # Runtime scripts for CLI execution (optional)
   outputs/            # Artifacts produced at each step (gitignored)
 ```
 
-Your IDE agent loads these files and executes each step — no SDK, no framework, no lock-in.
+Your IDE agent loads these files and executes each step — no SDK, no framework, no lock-in. For CLI execution, `scripts/run.sh` and `scripts/run.ps1` provide the orchestration layer.
 
 ---
 
@@ -123,14 +124,21 @@ steps:
 
 | Workflow | Description |
 |----------|-------------|
+| `examples/hello-world` | **Start here** — the simplest possible workflow. One agent, one skill, no config needed |
 | `examples/code-reviewer` | Reviews code for bugs, security issues, and improvements |
 | `examples/pr-summarizer` | Summarizes pull request diffs into structured reports |
 | `workflows/workflow-creator` | Meta-workflow — generates new workflows from a natural language description |
 
-Clone and point your IDE agent at any of them to get started immediately.
+Clone and point your IDE agent at `examples/hello-world` to get started in under a minute:
 
 ```bash
 git clone https://github.com/TisoneK/agentfile
+```
+
+Then in your IDE agent:
+
+```
+Follow workflow.yaml in examples/hello-world. Input: recursion
 ```
 
 ---

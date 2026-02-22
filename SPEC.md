@@ -24,11 +24,13 @@ A conforming Agentfile workflow directory MUST contain:
     <role>.md
   skills/                # Optional. Reusable skill instruction files.
     <skill-name>.md
-  scripts/               # Optional. Reference runtime scripts.
+  scripts/               # Optional. Runtime scripts for CLI execution.
     run.sh
     run.ps1
   outputs/               # Optional. Runtime artifacts. Should be gitignored.
 ```
+
+**Note:** The `scripts/` directory is optional when using IDE agents (they execute steps directly) but required when using the CLI `agentfile run` command which needs shell scripts for orchestration.
 
 ---
 
@@ -40,8 +42,9 @@ The `workflow.yaml` file is the entry point for every Agentfile workflow.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| `specVersion` | string | ✅ | Agentfile spec version this workflow targets. Current: `"1.0"`. |
 | `name` | string | ✅ | Workflow identifier. Lowercase, hyphenated. |
-| `version` | string | ✅ | Semantic version (e.g. `1.0.0`). |
+| `version` | string | ✅ | Semantic version of this workflow (e.g. `1.0.0`). |
 | `description` | string | ✅ | Human-readable description of what this workflow does. |
 | `trigger` | object | ✅ | How the workflow is started. |
 | `output` | object | ❌ | Where the workflow's final output is written. |
@@ -203,13 +206,45 @@ The `outputs/` directory is a runtime scratch space. It SHOULD be listed in `.gi
 
 ---
 
+## Discovery Convention
+
+To avoid ecosystem fragmentation, Agentfile defines one canonical discovery convention:
+
+**A workflow is discovered by the presence of `workflow.yaml` inside a named directory under `workflows/`:**
+
+```
+<project-root>/
+  workflows/
+    <workflow-name>/
+      workflow.yaml      ← discovery entry point
+```
+
+Optionally, a project-level manifest at the root signals that a directory is an Agentfile project:
+
+```
+<project-root>/
+  agentfile.yaml         ← optional project manifest
+  workflows/
+    <workflow-name>/
+      workflow.yaml
+```
+
+IDE agents and tooling SHOULD scan for `workflows/*/workflow.yaml` to enumerate available workflows. They MUST NOT require `agentfile.yaml` to be present — it is optional metadata only.
+
+---
+
 ## Compatibility
 
 Agentfile is designed to be executed by:
 
-- **IDE agents** (Cursor, Windsurf, Claude Code, Cline, Roo, GitHub Copilot) — by loading the workflow files as context and following the step structure
-- **Reference runtimes** — the Bash and PowerShell scripts in `scripts/` provide a standalone execution option
+- **IDE agents** (Cursor, Windsurf, Claude Code, Cline, Roo, GitHub Copilot) — by loading the workflow files as context and following the step structure. No scripts required.
+- **Reference runtimes** — the Bash and PowerShell scripts in `scripts/` provide a standalone execution option via `agentfile run`
 - **Custom runtimes** — any tool that can read YAML and Markdown can implement the spec
+
+### Execution Modes
+
+1. **IDE Agent Mode**: Load `workflow.yaml` and follow steps directly. Scripts optional.
+2. **CLI Runtime Mode**: Use `agentfile run` which executes `scripts/run.sh` or `scripts/run.ps1`. Scripts required.
 
 ---
 

@@ -1,5 +1,6 @@
 name: workflow-creator
 version: 1.0.0
+specVersion: "1.0"
 description: >
   A meta-workflow that takes a natural language request and generates
   a complete workflow package including config, agents, skills, and scripts.

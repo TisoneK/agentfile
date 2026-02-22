@@ -1,5 +1,6 @@
 name: code-reviewer
 version: 1.0.0
+specVersion: "1.0"
 description: >
   Reviews code files for bugs, security issues, style violations,
   and improvement opportunities. Produces a structured review report.

@@ -45,6 +45,18 @@ module.exports = async function run(workflowName, opts) {
   if (!fs.existsSync(scriptFile)) {
     log.error(`Runtime script not found: ${scriptFile}`);
     log.info(`Expected: workflows/${workflowName}/scripts/run.${shell === 'pwsh' ? 'ps1' : 'sh'}`);
+    console.log('');
+    log.info(chalk.bold('Why this happened:'));
+    log.info('  This workflow was designed for IDE agents (Cursor, Windsurf, Claude Code, etc.)');
+    log.info('  but the CLI runtime requires execution scripts.');
+    console.log('');
+    log.info(chalk.bold('Options:'));
+    log.info('  1. Use with an IDE agent by loading workflow.yaml and following its steps');
+    log.info('  2. Add scripts/run.sh and scripts/run.ps1 to enable CLI execution');
+    log.info('  3. Use "agentfile create" to generate a workflow with scripts included');
+    console.log('');
+    log.info(chalk.bold('Learn more:'));
+    log.info('  https://github.com/TisoneK/agentfile#ide-agent-compatibility');
     process.exit(1);
   }
 

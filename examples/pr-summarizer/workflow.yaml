@@ -1,5 +1,6 @@
 name: pr-summarizer
 version: 1.0.0
+specVersion: "1.0"
 description: >
   Reads a pull request diff and produces a concise, structured summary
   of what changed, why it matters, and what reviewers should focus on.

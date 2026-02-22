@@ -4,20 +4,34 @@
   "title": "Agentfile Workflow",
   "description": "Schema for Agentfile workflow.yaml configuration files.",
   "type": "object",
-  "required": ["name", "version", "description", "trigger", "steps"],
+  "required": [
+    "name",
+    "version",
+    "description",
+    "trigger",
+    "steps",
+    "specVersion"
+  ],
   "additionalProperties": false,
   "properties": {
     "name": {
       "type": "string",
       "description": "Workflow identifier. Lowercase, hyphenated.",
       "pattern": "^[a-z][a-z0-9-]*$",
-      "examples": ["code-reviewer", "pr-summarizer", "doc-generator"]
+      "examples": [
+        "code-reviewer",
+        "pr-summarizer",
+        "doc-generator"
+      ]
     },
     "version": {
       "type": "string",
       "description": "Semantic version of this workflow.",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
-      "examples": ["1.0.0", "2.1.0"]
+      "examples": [
+        "1.0.0",
+        "2.1.0"
+      ]
     },
     "description": {
       "type": "string",
@@ -26,18 +40,28 @@
     "trigger": {
       "type": "object",
       "description": "Defines how and when this workflow is started.",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
         "type": {
           "type": "string",
           "description": "The trigger mechanism.",
-          "enum": ["natural-language", "file", "schedule", "command"]
+          "enum": [
+            "natural-language",
+            "file",
+            "schedule",
+            "command"
+          ]
         },
         "input_var": {
           "type": "string",
           "description": "Environment variable name that holds the trigger input.",
-          "examples": ["AGENT_INPUT", "WORKFLOW_REQUEST"]
+          "examples": [
+            "AGENT_INPUT",
+            "WORKFLOW_REQUEST"
+          ]
         }
       }
     },
@@ -49,7 +73,10 @@
         "directory": {
           "type": "string",
           "description": "Target directory for the final output.",
-          "examples": ["workflows/{workflow_name}", "outputs/"]
+          "examples": [
+            "workflows/{workflow_name}",
+            "outputs/"
+          ]
         }
       }
     },
@@ -59,10 +86,24 @@
       "minItems": 1,
       "items": {
         "oneOf": [
-          { "$ref": "#/definitions/agentStep" },
-          { "$ref": "#/definitions/shellStep" }
+          {
+            "$ref": "#/definitions/agentStep"
+          },
+          {
+            "$ref": "#/definitions/shellStep"
+          }
         ]
       }
+    },
+    "specVersion": {
+      "type": "string",
+      "description": "Agentfile spec version this workflow targets.",
+      "enum": [
+        "1.0"
+      ],
+      "examples": [
+        "1.0"
+      ]
     }
   },
   "definitions": {
@@ -70,7 +111,14 @@
       "type": "object",
       "title": "Agent Step",
       "description": "A step that calls an LLM agent.",
-      "required": ["id", "name", "agent", "input", "goal", "produces"],
+      "required": [
+        "id",
+        "name",
+        "agent",
+        "input",
+        "goal",
+        "produces"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -85,17 +133,26 @@
         "agent": {
           "type": "string",
           "description": "Relative path to the agent .md file.",
-          "examples": ["agents/reviewer.md", "agents/analyst.md"]
+          "examples": [
+            "agents/reviewer.md",
+            "agents/analyst.md"
+          ]
         },
         "skill": {
           "type": "string",
           "description": "Relative path to a skill .md file to inject into the user prompt.",
-          "examples": ["skills/code-analysis.md", "skills/write-review.md"]
+          "examples": [
+            "skills/code-analysis.md",
+            "skills/write-review.md"
+          ]
         },
         "input": {
           "type": "string",
           "description": "Input to the step. A file path or $VAR reference.",
-          "examples": ["$AGENT_INPUT", "outputs/analysis.md"]
+          "examples": [
+            "$AGENT_INPUT",
+            "outputs/analysis.md"
+          ]
         },
         "goal": {
           "type": "string",
@@ -104,12 +161,17 @@
         "produces": {
           "type": "string",
           "description": "Path to the artifact this step writes.",
-          "examples": ["outputs/analysis.md", "outputs/review.md"]
+          "examples": [
+            "outputs/analysis.md",
+            "outputs/review.md"
+          ]
         },
         "gate": {
           "type": "string",
           "description": "If set to human-approval, pause for user confirmation before continuing.",
-          "enum": ["human-approval"]
+          "enum": [
+            "human-approval"
+          ]
         }
       }
     },
@@ -117,7 +179,13 @@
       "type": "object",
       "title": "Shell Step",
       "description": "A step that runs a shell script directly.",
-      "required": ["id", "name", "action", "script", "goal"],
+      "required": [
+        "id",
+        "name",
+        "action",
+        "script",
+        "goal"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -132,7 +200,9 @@
         "action": {
           "type": "string",
           "description": "Must be 'shell' for shell steps.",
-          "enum": ["shell"]
+          "enum": [
+            "shell"
+          ]
         },
         "script": {
           "type": "object",
@@ -142,12 +212,16 @@
             "bash": {
               "type": "string",
               "description": "Path to the Bash script.",
-              "examples": ["scripts/register.sh"]
+              "examples": [
+                "scripts/register.sh"
+              ]
             },
             "pwsh": {
               "type": "string",
               "description": "Path to the PowerShell script.",
-              "examples": ["scripts/register.ps1"]
+              "examples": [
+                "scripts/register.ps1"
+              ]
             }
           }
         },

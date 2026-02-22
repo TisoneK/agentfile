@@ -1,0 +1,22 @@
+specVersion: "1.0"
+name: hello-world
+version: 1.0.0
+description: >
+  The simplest possible Agentfile workflow.
+  Takes a topic and writes a one-paragraph explanation of it.
+  No configuration needed — just point your IDE agent at this file.
+
+trigger:
+  type: natural-language
+  input_var: AGENT_INPUT
+
+steps:
+  - id: explain
+    name: Explain the Topic
+    agent: agents/explainer.md
+    skill: skills/explain.md
+    input: $AGENT_INPUT
+    goal: >
+      Write a clear, one-paragraph explanation of the given topic.
+      Suitable for a developer who has never encountered it before.
+    produces: outputs/explanation.md

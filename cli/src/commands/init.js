@@ -77,7 +77,45 @@ These rules apply to every agent in every workflow.
   log.success('Created shared/AGENTS.md');
 
   // ── .gitignore ─────────────────────────────────────────────────────────────
-  writeFile(path.join(cwd, '.gitignore'), `outputs/\n*.log\n.env\n.DS_Store\n`);
+  writeFile(path.join(cwd, '.gitignore'), `# Agentfile runtime artifacts
+outputs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node.js
+node_modules/
+.npm
+.eslintcache
+
+# Temporary files
+*.tmp
+*.temp
+`);
   log.success('Created .gitignore');
 
   // ── agentfile.yaml (project manifest) ─────────────────────────────────────
