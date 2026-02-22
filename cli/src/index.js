@@ -52,7 +52,7 @@ program
   .option('--input <text>', 'Input to pass to the workflow (text or file path)')
   .option('--key <key>', 'LLM API key (or set AGENT_API_KEY env var)')
   .option('--model <model>', 'Model to use (or set AGENT_MODEL env var)')
-  .option('--shell <shell>', 'Runtime shell: bash or pwsh (PowerShell runs with -ExecutionPolicy Bypass)', 'bash')
+  .option('--shell <shell>', 'Runtime shell: bash or pwsh (auto-detected by OS, PowerShell runs with -ExecutionPolicy Bypass)')
   .action(async (workflowName, opts) => {
     banner();
     await cmdRun(workflowName, opts);

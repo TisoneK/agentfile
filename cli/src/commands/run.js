@@ -36,7 +36,9 @@ module.exports = async function run(workflowName, opts) {
   }
 
   // ── Resolve script ──────────────────────────────────────────────────────────
-  const shell = opts.shell || 'bash';
+  const os = require('os');
+  const isWindows = os.platform() === 'win32';
+  const shell = opts.shell || (isWindows ? 'pwsh' : 'bash');
   const scriptFile = shell === 'pwsh'
     ? path.join(workflow.path, 'scripts', 'run.ps1')
     : path.join(workflow.path, 'scripts', 'run.sh');
@@ -62,7 +64,7 @@ module.exports = async function run(workflowName, opts) {
 
   log.step(`Running workflow: ${chalk.bold(workflowName)}`);
   log.dim(`Script:  ${scriptFile}`);
-  log.dim(`Shell:   ${shell}`);
+  log.dim(`Shell:   ${shell}${opts.shell ? '' : ' (auto-detected)'}`);
   log.dim(`Model:   ${model}`);
   log.dim(`Input:   ${input.length > 60 ? input.slice(0, 60) + '...' : input}`);
   console.log('');
