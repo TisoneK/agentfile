@@ -15,15 +15,35 @@ Add this to your Cursor rules file (.cursor/rules):
 # Agentfile Workflow Integration
 When you see /agentfile-run:<workflow-name>, execute the workflow:
 
+## IMPORTANT: Execution Mode Priority
+1. ALWAYS check workflow.yaml for "execution.preferred" field first
+2. If "preferred: ide" → Follow workflow.yaml steps directly (DO NOT run scripts)
+3. If "preferred: cli" → Use scripts/run.sh or scripts/run.ps1
+4. If no execution field → Default to IDE mode (follow workflow.yaml)
+
+## IDE Mode Execution (Preferred)
+When execution.preferred is "ide" or unspecified:
 1. Read workflows/<workflow-name>/workflow.yaml to understand steps
 2. Load agent definitions from workflows/<workflow-name>/agents/*.md as system prompts
 3. Load skill instructions from workflows/<workflow-name>/skills/*.md into user prompt context
 4. Execute each step sequentially using the provided input
 5. Follow the exact output format specified in each agent file
+6. NEVER execute scripts/run.sh or scripts/run.ps1 in IDE mode
 
-Example execution:
-- User: "/agentfile-run:code-reviewer\\nInput: src/components/Button.js"
-- You: Load workflow.yaml, become the code reviewer agent, apply code analysis skills, review the file
+## CLI Mode Execution
+When execution.preferred is "cli":
+1. Execute workflows/<workflow-name>/scripts/run.sh (Unix) or run.ps1 (Windows)
+2. Pass input as command line argument
+3. Let the scripts handle API calls and output generation
+
+## Example Execution
+User: "/agentfile-run:code-reviewer\\nInput: src/components/Button.js"
+You: 
+1. Check workflow.yaml → execution.preferred is "ide"
+2. Load workflow.yaml, become the code reviewer agent
+3. Apply code analysis skills, review skills, summarizer skills
+4. Execute all 3 steps sequentially
+5. Generate structured review output
 \`\`\`
 
 ## Usage Examples
@@ -51,11 +71,26 @@ Add this to your Windsurf cascade or rules file:
 # Agentfile Workflow Integration
 When you see /agentfile-run:<workflow-name>, execute the workflow:
 
+## IMPORTANT: Execution Mode Priority
+1. ALWAYS check workflow.yaml for "execution.preferred" field first
+2. If "preferred: ide" → Follow workflow.yaml steps directly (DO NOT run scripts)
+3. If "preferred: cli" → Use scripts/run.sh or scripts/run.ps1
+4. If no execution field → Default to IDE mode (follow workflow.yaml)
+
+## IDE Mode Execution (Preferred)
+When execution.preferred is "ide" or unspecified:
 1. Read workflows/<workflow-name>/workflow.yaml to understand steps
 2. Load agent definitions from workflows/<workflow-name>/agents/*.md as system prompts
 3. Load skill instructions from workflows/<workflow-name>/skills/*.md into user prompt context
 4. Execute each step sequentially using the provided input
 5. Follow the exact output format specified in each agent file
+6. NEVER execute scripts/run.sh or scripts/run.ps1 in IDE mode
+
+## CLI Mode Execution
+When execution.preferred is "cli":
+1. Execute workflows/<workflow-name>/scripts/run.sh (Unix) or run.ps1 (Windows)
+2. Pass input as command line argument
+3. Let scripts handle API calls and output generation
 
 ## Usage Examples
 /agentfile-run:hello-world

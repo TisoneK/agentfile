@@ -366,6 +366,32 @@ agentfile/
 
 Configure default shell with `agentfile config set shell <bash|pwsh>`
 
+### Execution Modes
+
+Agentfile workflows support two execution modes:
+
+**IDE Mode (Default)**
+- Follows `workflow.yaml` steps directly
+- Uses agents/skills as prompts
+- No scripts required
+- Best for interactive development
+
+**CLI Mode**
+- Executes `scripts/run.sh` or `scripts/run.ps1`
+- Scripts handle API calls and orchestration
+- Required for automation/CI/CD
+- Best for production workflows
+
+**Execution Control**
+```yaml
+# workflow.yaml
+execution:
+  preferred: "ide"    # or "cli"
+  fallback: "cli"      # backup option
+```
+
+IDE agents automatically detect the preferred mode and execute accordingly.
+
 ---
 
 ## Contributing

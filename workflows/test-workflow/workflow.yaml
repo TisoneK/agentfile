@@ -1,0 +1,31 @@
+specVersion: "1.0"
+name: test-workflow
+version: 1.0.0
+description: >
+  A test workflow for validating Agentfile functionality.
+  Takes a topic and creates a comprehensive analysis with multiple perspectives.
+
+trigger:
+  type: natural-language
+  input_var: AGENT_INPUT
+
+steps:
+  - id: analyze
+    name: Analyze Topic
+    agent: agents/analyzer.md
+    skill: skills/analyze.md
+    input: $AGENT_INPUT
+    goal: >
+      Provide a detailed analysis of the given topic from multiple perspectives.
+      Include technical aspects, practical applications, and potential challenges.
+    produces: outputs/analysis.md
+
+  - id: summarize
+    name: Create Summary
+    agent: agents/summarizer.md
+    skill: skills/summarize.md
+    input: $AGENT_INPUT
+    goal: >
+      Create a concise summary of the topic analysis with key takeaways.
+      Focus on the most important points and actionable insights.
+    produces: outputs/summary.md

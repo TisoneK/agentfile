@@ -47,6 +47,7 @@ The `workflow.yaml` file is the entry point for every Agentfile workflow.
 | `version` | string | ✅ | Semantic version of this workflow (e.g. `1.0.0`). |
 | `description` | string | ✅ | Human-readable description of what this workflow does. |
 | `trigger` | object | ✅ | How the workflow is started. |
+| `execution` | object | ❌ | Execution mode preferences for IDE vs CLI runtime. |
 | `output` | object | ❌ | Where the workflow's final output is written. |
 | `steps` | array | ✅ | Ordered list of steps to execute. |
 
@@ -56,6 +57,32 @@ The `workflow.yaml` file is the entry point for every Agentfile workflow.
 trigger:
   type: natural-language | file | schedule | command
   input_var: AGENT_INPUT   # Environment variable that holds the trigger input
+```
+
+### execution
+
+Optional field that specifies execution mode preferences for different runtime environments.
+
+```yaml
+execution:
+  preferred: "ide" | "cli"    # Preferred execution mode
+  fallback: "ide" | "cli"      # Fallback if preferred unavailable
+```
+
+**Values:**
+- `"ide"` - Execute workflow steps directly in IDE agent (default)
+- `"cli"` - Execute via scripts/run.sh or scripts/run.ps1
+
+**Behavior:**
+- **IDE agents**: Check `execution.preferred`, use that mode if available
+- **CLI runtime**: Always uses scripts, ignores execution field
+- **No execution field**: Defaults to IDE mode
+
+**Example:**
+```yaml
+execution:
+  preferred: "ide"
+  fallback: "cli"
 ```
 
 ### steps

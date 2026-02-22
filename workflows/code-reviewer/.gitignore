@@ -1,0 +1,17 @@
+# Agentfile workflow outputs
+outputs/
+*.md.bak
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp

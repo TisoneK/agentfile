@@ -1,0 +1,45 @@
+specVersion: "1.0"
+name: code-reviewer
+version: 1.0.0
+description: >
+  Reviews code for bugs, security issues, style violations, and potential improvements.
+  Provides structured feedback with actionable recommendations.
+
+execution:
+  preferred: "ide"
+  fallback: "cli"
+
+trigger:
+  type: natural-language
+  input_var: AGENT_INPUT
+
+steps:
+  - id: analyze
+    name: Analyze Code
+    agent: agents/analyzer.md
+    skill: skills/code-analysis.md
+    input: $AGENT_INPUT
+    goal: >
+      Perform comprehensive code analysis to identify bugs, security vulnerabilities,
+      performance issues, and code smells. Focus on technical correctness and best practices.
+    produces: outputs/01-analysis.md
+
+  - id: review
+    name: Write Review
+    agent: agents/reviewer.md
+    skill: skills/write-review.md
+    input: outputs/01-analysis.md
+    goal: >
+      Transform the technical analysis into a clear, actionable code review report.
+      Prioritize issues by severity and provide specific improvement suggestions.
+    produces: outputs/02-review.md
+
+  - id: summarize
+    name: Create Summary
+    agent: agents/summarizer.md
+    skill: skills/summarize.md
+    input: outputs/02-review.md
+    goal: >
+      Create a concise summary with key findings, critical issues, and quick-win improvements.
+      Focus on the most important takeaways for immediate action.
+    produces: outputs/03-summary.md
