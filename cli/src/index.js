@@ -11,6 +11,7 @@ const cmdRun      = require('./commands/run');
 const cmdList     = require('./commands/list');
 const cmdValidate = require('./commands/validate');
 const cmdConfig   = require('./commands/config');
+const cmdSetupIde = require('./commands/setup-ide');
 
 // ── Banner ────────────────────────────────────────────────────────────────────
 const banner = () => {
@@ -94,6 +95,14 @@ program
   .action(async (action, key, value, opts) => {
     banner();
     await cmdConfig(action, key, value, opts);
+  });
+
+program
+  .command('setup-ide [ide-name]')
+  .description('Generate IDE integration instructions for slash commands')
+  .action(async (ideName, opts) => {
+    banner();
+    await cmdSetupIde(ideName, opts);
   });
 
 // ── Parse ─────────────────────────────────────────────────────────────────────
