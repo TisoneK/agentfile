@@ -69,7 +69,7 @@ module.exports = async function run(workflowName, opts) {
 
   // ── Execute ─────────────────────────────────────────────────────────────────
   const cmd = shell === 'pwsh'
-    ? `pwsh "${scriptFile}"`
+    ? `pwsh -ExecutionPolicy Bypass "${scriptFile}"`
     : `bash "${scriptFile}"`;
 
   try {
