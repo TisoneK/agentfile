@@ -10,6 +10,7 @@ const cmdCreate   = require('./commands/create');
 const cmdRun      = require('./commands/run');
 const cmdList     = require('./commands/list');
 const cmdValidate = require('./commands/validate');
+const cmdConfig   = require('./commands/config');
 
 // ── Banner ────────────────────────────────────────────────────────────────────
 const banner = () => {
@@ -73,6 +74,26 @@ program
   .action(async (workflowName, opts) => {
     banner();
     await cmdValidate(workflowName, opts);
+  });
+
+program
+  .command('config [action] [key] [value]')
+  .description('Manage configuration (API keys, default model, etc.)')
+  .on('--help', () => {
+    console.log('');
+    console.log('Examples:');
+    console.log('  agentfile config                    # Show current config');
+    console.log('  agentfile config set api-key <key>  # Save API key');
+    console.log('  agentfile config set model <model>  # Set default model');
+    console.log('  agentfile config set shell pwsh     # Set default shell');
+    console.log('  agentfile config unset api-key      # Remove API key');
+    console.log('');
+    console.log('Available keys: api-key, model, shell');
+    console.log('Available actions: show, set, unset');
+  })
+  .action(async (action, key, value, opts) => {
+    banner();
+    await cmdConfig(action, key, value, opts);
   });
 
 // ── Parse ─────────────────────────────────────────────────────────────────────

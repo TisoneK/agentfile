@@ -4,6 +4,7 @@ const path   = require('path');
 const chalk  = require('chalk');
 const { execSync } = require('child_process');
 const { log, findProjectRoot, findWorkflow } = require('../lib/utils');
+const { loadConfig } = require('./config');
 
 module.exports = async function run(workflowName, opts) {
   const projectRoot = findProjectRoot();
@@ -20,11 +21,12 @@ module.exports = async function run(workflowName, opts) {
   }
 
   // ── Resolve API key & model ─────────────────────────────────────────────────
-  const apiKey = opts.key || process.env.AGENT_API_KEY;
-  const model  = opts.model || process.env.AGENT_MODEL || 'claude-sonnet-4-6';
+  const config = loadConfig();
+  const apiKey = opts.key || process.env.AGENT_API_KEY || config.apiKey;
+  const model  = opts.model || process.env.AGENT_MODEL || config.model || 'claude-sonnet-4-6';
 
   if (!apiKey) {
-    log.error('No API key provided. Use --key or set AGENT_API_KEY.');
+    log.error('No API key provided. Use --key, set AGENT_API_KEY, or run "agentfile config set api-key <key>"');
     process.exit(1);
   }
 
@@ -38,7 +40,7 @@ module.exports = async function run(workflowName, opts) {
   // ── Resolve script ──────────────────────────────────────────────────────────
   const os = require('os');
   const isWindows = os.platform() === 'win32';
-  const shell = opts.shell || (isWindows ? 'pwsh' : 'bash');
+  const shell = opts.shell || config.defaultShell || (isWindows ? 'pwsh' : 'bash');
   const scriptFile = shell === 'pwsh'
     ? path.join(workflow.path, 'scripts', 'run.ps1')
     : path.join(workflow.path, 'scripts', 'run.sh');
@@ -64,7 +66,8 @@ module.exports = async function run(workflowName, opts) {
 
   log.step(`Running workflow: ${chalk.bold(workflowName)}`);
   log.dim(`Script:  ${scriptFile}`);
-  log.dim(`Shell:   ${shell}${opts.shell ? '' : ' (auto-detected)'}`);
+  const shellSource = opts.shell ? 'explicit' : config.defaultShell ? 'config' : 'auto-detected';
+  log.dim(`Shell:   ${shell} (${shellSource})`);
   log.dim(`Model:   ${model}`);
   log.dim(`Input:   ${input.length > 60 ? input.slice(0, 60) + '...' : input}`);
   console.log('');
