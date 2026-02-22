@@ -1,0 +1,96 @@
+name: workflow-creator
+version: 1.0.0
+description: >
+  A meta-workflow that takes a natural language request and generates
+  a complete workflow package including config, agents, skills, and scripts.
+
+trigger:
+  type: natural-language
+  input_var: WORKFLOW_REQUEST
+
+output:
+  directory: workflows/{workflow_name}
+
+steps:
+  - id: clarify
+    name: Clarify Request
+    agent: agents/analyst.md
+    skill: skills/ask-clarifying.md
+    input: $WORKFLOW_REQUEST
+    goal: >
+      Extract and clarify the workflow's purpose, inputs, outputs, steps,
+      agents needed, edge cases, and any ambiguities. Ask the user questions
+      if anything is unclear.
+    produces: outputs/01-clarification.md
+    gate: human-approval
+
+  - id: design
+    name: Design Workflow
+    agent: agents/architect.md
+    skill: skills/design-workflow.md
+    input: outputs/01-clarification.md
+    goal: >
+      Design the complete workflow structure: step list, agent roles,
+      skills needed, script logic, and file manifest.
+    produces: outputs/02-design.md
+    gate: human-approval
+
+  - id: generate-config
+    name: Generate workflow.yaml
+    agent: agents/generator.md
+    skill: skills/generate-yaml.md
+    input: outputs/02-design.md
+    goal: Generate the workflow.yaml config file for the new workflow.
+    produces: outputs/03-workflow.yaml
+
+  - id: generate-agents
+    name: Generate Agent Files
+    agent: agents/generator.md
+    skill: skills/generate-agent.md
+    input: outputs/02-design.md
+    goal: Generate all agent .md files defined in the design.
+    produces: outputs/04-agents/
+
+  - id: generate-skills
+    name: Generate Skill Files
+    agent: agents/generator.md
+    skill: skills/generate-skill.md
+    input: outputs/02-design.md
+    goal: Generate all skill .md files defined in the design.
+    produces: outputs/05-skills/
+
+  - id: generate-scripts
+    name: Generate Scripts
+    agent: agents/generator.md
+    skill: skills/generate-script.md
+    input: outputs/02-design.md
+    goal: >
+      Generate the orchestration scripts (run.sh and run.ps1) that
+      execute the workflow steps by calling the Anthropic API.
+    produces: outputs/06-scripts/
+
+  - id: review
+    name: Review All Outputs
+    agent: agents/reviewer.md
+    skill: skills/review-workflow.md
+    input:
+      - outputs/02-design.md
+      - outputs/03-workflow.yaml
+      - outputs/04-agents/
+      - outputs/05-skills/
+      - outputs/06-scripts/
+    goal: >
+      Review all generated files for consistency, completeness, and correctness.
+      Produce a review report. Flag any issues.
+    produces: outputs/07-review.md
+    gate: human-approval
+
+  - id: register
+    name: Register Workflow
+    action: shell
+    script:
+      bash: scripts/register.sh
+      pwsh: scripts/register.ps1
+    goal: >
+      Move all approved generated files into the correct workflow folder
+      under workflows/{workflow_name}/.

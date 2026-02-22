@@ -1,0 +1,31 @@
+{
+  "name": "agentfile",
+  "version": "1.0.0",
+  "description": "CLI for defining and running LLM workflows as files — for any IDE agent.",
+  "keywords": ["llm", "ai", "workflow", "agents", "cursor", "claude", "copilot", "cline"],
+  "author": "TisoneK",
+  "license": "MIT",
+  "homepage": "https://github.com/TisoneK/agentfile",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TisoneK/agentfile.git"
+  },
+  "bin": {
+    "agentfile": "./src/index.js"
+  },
+  "main": "./src/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "chalk": "^4.1.2",
+    "js-yaml": "^4.1.0",
+    "ajv": "^8.12.0"
+  },
+  "files": [
+    "src/",
+    "README.md"
+  ]
+}

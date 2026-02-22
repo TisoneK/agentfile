@@ -1,0 +1,31 @@
+name: code-reviewer
+version: 1.0.0
+description: >
+  Reviews code files for bugs, security issues, style violations,
+  and improvement opportunities. Produces a structured review report.
+
+trigger:
+  type: natural-language
+  input_var: AGENT_INPUT
+
+steps:
+  - id: analyze
+    name: Analyze Code
+    agent: agents/analyzer.md
+    skill: skills/code-analysis.md
+    input: $AGENT_INPUT
+    goal: >
+      Read the code and identify bugs, security issues, code smells,
+      and areas for improvement. Be specific — cite line numbers where possible.
+    produces: outputs/01-analysis.md
+
+  - id: review
+    name: Write Review
+    agent: agents/reviewer.md
+    skill: skills/write-review.md
+    input: outputs/01-analysis.md
+    goal: >
+      Turn the analysis into a clear, actionable code review report
+      a developer can act on immediately.
+    produces: outputs/02-review.md
+    gate: human-approval
