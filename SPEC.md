@@ -73,8 +73,7 @@ Optional field that specifies execution mode preferences for different runtime e
 
 ```yaml
 execution:
-  preferred: "ide" | "cli"    # Preferred execution mode
-  fallback: "ide" | "cli"      # Fallback if preferred unavailable
+  preferred: "ide" | "cli"    # Preferred execution mode (default: "ide")
 ```
 
 **Values:**
@@ -86,11 +85,22 @@ execution:
 - **CLI runtime**: Always uses scripts, ignores execution field
 - **No execution field**: Defaults to IDE mode
 
+**IDE Mode Processing:**
+1. Load agents from `agents/*.md` as system prompts
+2. Load skills from `skills/*.md` as context
+3. Execute steps sequentially using your LLM
+4. **NEVER** execute scripts unless explicitly required by workflow
+5. Process file references by reading the specified files
+
+**CLI Mode Processing:**
+1. Execute `workflows/<workflow-name>/scripts/cli/run.sh` or `run.ps1`
+2. Pass input as command line argument
+3. Scripts handle API calls and orchestration
+
 **Example:**
 ```yaml
 execution:
-  preferred: "ide"
-  fallback: "cli"
+  preferred: "ide"    # Run in IDE by default
 ```
 
 ### steps

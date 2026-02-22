@@ -10,6 +10,18 @@ A comprehensive code review workflow that analyzes code for bugs, security issue
 Input: src/components/Button.js
 ```
 
+**IDE Processing Instructions:**
+1. **CRITICAL**: Check `execution.preferred` field in workflow.yaml
+2. If `preferred: ide` → **MUST** use IDE mode
+3. If `preferred: cli` → **MUST** use CLI mode
+4. If no execution field → **DEFAULT** to IDE mode
+5. **NEVER** ignore execution preference - this is mandatory
+6. Load agents from `agents/*.md` as system prompts
+7. Load skills from `skills/*.md` as context  
+8. Execute steps sequentially using your LLM
+9. **NEVER** execute scripts - this is IDE-only workflow
+10. Process file references by reading the specified files
+
 ### CLI
 ```bash
 agentfile run code-reviewer --input "src/components/Button.js"

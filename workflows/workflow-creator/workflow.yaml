@@ -95,8 +95,8 @@ steps:
     name: Register Workflow
     action: shell
     script:
-      bash: scripts/register.sh
-      pwsh: scripts/register.ps1
+      bash: scripts/cli/register.sh
+      pwsh: scripts/cli/register.ps1
     goal: >
       Move all approved generated files into the correct workflow folder
       under workflows/{workflow_name}/.

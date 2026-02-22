@@ -1,12 +1,30 @@
 #!/usr/bin/env pwsh
 $ErrorActionPreference = "Stop"
 
-# ── Configuration ──────────────────────────────────────────────────────────────
+# ── Configuration ──────────────────────────────────────────────────────
 $WorkflowDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $SharedDir   = Join-Path $WorkflowDir "../../../shared"
 $OutputsDir  = Join-Path $WorkflowDir "outputs"
-$ApiKey      = if ($env:ANTHROPIC_API_KEY) { $env:ANTHROPIC_API_KEY } else { throw "ANTHROPIC_API_KEY is not set" }
-$Model       = "claude-sonnet-4-6"
+
+# Load configuration like CLI does
+$ConfigFile = Join-Path $env:USERPROFILE ".agentfile/config.json"
+if (Test-Path $ConfigFile) {
+    $Config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
+    $ApiKey = if ($Config.apiKey) { $Config.apiKey } else { $null }
+    $Model = if ($Config.model) { $Config.model } else { "claude-sonnet-4-6" }
+} else {
+    $ApiKey = $env:ANTHROPIC_API_KEY
+    $Model = "claude-sonnet-4-6"
+}
+
+if (-not $ApiKey) {
+    Write-Host "✗ No API key found. Use one of these options:"
+    Write-Host "  1. Set ANTHROPIC_API_KEY environment variable"
+    Write-Host "  2. Run 'agentfile config set api-key <key>' to save it"
+    Write-Host "  3. Use --key option when running workflow"
+    exit 1
+}
+
 New-Item -ItemType Directory -Force -Path $OutputsDir | Out-Null
 
 # ── Helper Functions ────────────────────────────────────────────────────────────

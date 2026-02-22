@@ -1,73 +1,4 @@
-
-
-/agentfile-run:slash-demo
-Input: artificial intelligence
-
-I'll run the slash-demo workflow with the input "artificial intelligence". Let me first check the workflow structure and then execute it.
-
-Now I'll run the workflow using the CLI command:
-
-Command cd, node in …\Dev\agentfile
-
-cd c:\Users\tison\Dev\agentfile && node cli/src/index.js run workflows/slash-demo "artificial intelligence"
-  Agentfile v1.0.0
-  ✗ Workflow "workflows/slash-demo" not found.IDE
-  ℹ Run `agentfile list` to see available workflows.
-
-Let me check the available workflows and the correct path:
-
-Command cd, node in …\Dev\agentfile
-
-cd c:\Users\tison\Dev\agentfile && node cli/src/index.js list
-flows/slash-demo "artificial intelligence"
-  Agentfile v1.0.0
-  Define LLM workflows as files. Run with any IDE  dir-structure                 v1.0.0    1 step
-  slash-demo                    v1.0.0    1 step
-    A simple demonstration workflow for testing t  workflow-creator              v1.0.0    8 steps
-    A meta-workflow that takes a natural language  Run a workflow:nd.es a 
-    agentfile run <workflow-name> --input "your i
-
-I can see the workflow is available as "slash-demo". Let me run it with the correct syntax:
-
-Command cd, node in …\Dev\agentfile
-
-cd c:\Users\tison\Dev\agentfile && node cli/src/index.js run slash-demo --input "artificial intelligence"
-h-demo --input "artificial intelligence"
-
-  Agentfile v1.0.0
-  Define LLM workflows as files. Run with any IDE agent.
-
-  ✗ Runtime script not found: C:\Users\tison\Dev\agentfile\workflows\slash-demo\scripts\run.ps1
-  ℹ Expected: workflows/slash-demo/scripts/run.ps1
-
-  ℹ Why this happened:
-  ℹ   This workflow was designed for IDE agents (Cursor, Windsurf, Claude Code, etc.)
-  ℹ   but the CLI runtime requires execution scripts.
-
-  ℹ Options:
-  ℹ   1. Use with an IDE agent by loading workflow.yaml and following its steps
-  ℹ   2. Add scripts/run.sh and scripts/run.ps1 to enable CLI execution
-  ℹ   3. Use "agentfile create" to generate a workflow with scripts included
-
-  ℹ Learn more:
-  ℹ   https://github.com/TisoneK/agentfile#ide-agent-compatibility
-
-The workflow requires scripts for CLI execution. Let me create the necessary PowerShell script to run this workflow:
-
-run.ps1
-new
-+47
-$SummaryContent | Out-File -FilePath $OutputPath -Encoding UTF8
- 
-Write-Host "✓ Workflow completed successfully"
-Write-Host "✓ Output written to: $OutputPath"
- 
-
-
-
-Now let me run the workflow again:
-
-Command cd, node in …\Dev\agentfile# Agentfile
+# Agentfile
 
 **Agentfile is workflow-as-files for AI agents.**
 
@@ -304,10 +235,13 @@ Input: https://github.com/user/repo/pull/123
 When an IDE agent sees `/agentfile-run:<workflow-name>`, it:
 
 1. **Locates** `workflows/<workflow-name>/workflow.yaml`
-2. **Loads** all agent definitions from `agents/*.md`
-3. **Injects** skills from `skills/*.md` 
-4. **Executes** each step sequentially
-5. **Uses** the provided input for the workflow
+2. **Checks** the execution mode preference
+3. **Loads** all agent definitions from `agents/*.md`
+4. **Injects** skills from `skills/*.md` 
+5. **Executes** each step sequentially
+6. **Uses** the provided input for the workflow
+
+→ Full IDE processing guide: [docs/ide-slash-commands.md](./docs/ide-slash-commands.md)
 
 ### IDE-Specific Instructions
 
@@ -343,6 +277,7 @@ agentfile/
   cli/                          # Node.js CLI source
   docs/
     concepts.md                  # Deep dive: how everything works
+    ide-slash-commands.md       # IDE processing guide
   ~/.agentfile/
     config.json                 # User configuration (API keys, defaults)
 ```
@@ -390,7 +325,6 @@ Agentfile workflows support two execution modes with dual script support:
 # workflow.yaml
 execution:
   preferred: "ide"    # or "cli"
-  fallback: "cli"      # backup option
 ```
 
 **Generated Structure:**
