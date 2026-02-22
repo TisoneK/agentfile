@@ -67,6 +67,13 @@ agentfile create code-reviewer
 
 ### 4. Open in your IDE agent
 
+**Simple Slash Command (Recommended)**
+
+```
+/agentfile-run:code-reviewer
+Input: src/auth.js
+```
+
 **Cursor / Windsurf** — paste into composer or your rules file:
 
 ```
@@ -166,6 +173,7 @@ agentfile config unset api-key
 | `examples/hello-world` | **Start here** — the simplest possible workflow. One agent, one skill, no config needed |
 | `examples/code-reviewer` | Reviews code for bugs, security issues, and improvements |
 | `examples/pr-summarizer` | Summarizes pull request diffs into structured reports |
+| `workflows/slash-demo` | **Slash command demo** — perfect for testing `/agentfile-run:slash-demo` |
 | `workflows/workflow-creator` | Meta-workflow — generates new workflows from a natural language description |
 
 Clone and point your IDE agent at `examples/hello-world` to get started in under a minute:
@@ -177,8 +185,57 @@ git clone https://github.com/TisoneK/agentfile
 Then in your IDE agent:
 
 ```
-Follow workflow.yaml in examples/hello-world. Input: recursion
+/agentfile-run:hello-world
+Input: recursion
 ```
+
+---
+
+## IDE Agent Execution
+
+### Slash Command Format
+
+The simplest way to run workflows in any IDE agent:
+
+```
+/agentfile-run:<workflow-name>
+Input: <your-input-here>
+```
+
+**Examples:**
+```
+/agentfile-run:hello-world
+Input: recursion
+
+/agentfile-run:slash-demo
+Input: artificial intelligence
+
+/agentfile-run:code-reviewer
+Input: src/components/Button.js
+
+/agentfile-run:pr-summarizer
+Input: https://github.com/user/repo/pull/123
+```
+
+### How It Works
+
+When an IDE agent sees `/agentfile-run:<workflow-name>`, it:
+
+1. **Locates** `workflows/<workflow-name>/workflow.yaml`
+2. **Loads** all agent definitions from `agents/*.md`
+3. **Injects** skills from `skills/*.md` 
+4. **Executes** each step sequentially
+5. **Uses** the provided input for the workflow
+
+### IDE-Specific Instructions
+
+| IDE | How to Use |
+|-----|------------|
+| **Cursor** | Type `/agentfile-run:name` in composer |
+| **Windsurf** | Use slash command in cascade or rules |
+| **Claude Code** | `claude "/agentfile-run:name"` |
+| **GitHub Copilot** | Add to workspace instructions |
+| **Cline/Roo** | Include in system prompt |
 
 ---
 
