@@ -4,6 +4,10 @@ specVersion: "1.0"
 description: >
   A meta-workflow that takes a natural language request and generates
   a complete workflow package including config, agents, skills, and scripts.
+  Automatically creates both IDE and CLI execution scripts based on preference.
+
+execution:
+  preferred: "ide"
 
 trigger:
   type: natural-language
@@ -63,11 +67,12 @@ steps:
   - id: generate-scripts
     name: Generate Scripts
     agent: agents/generator.md
-    skill: skills/generate-script.md
+    skill: skills/generate-dual-scripts.md
     input: outputs/02-design.md
     goal: >
-      Generate the orchestration scripts (run.sh and run.ps1) that
-      execute the workflow steps by calling the Anthropic API.
+      Generate both IDE and CLI execution scripts based on the workflow design.
+      Create scripts/ide/ for IDE agent instructions and scripts/cli/ for runtime scripts.
+      Detect execution preference from workflow design and generate appropriate scripts.
     produces: outputs/06-scripts/
 
   - id: review

@@ -15,11 +15,14 @@ Add this to your Cursor rules file (.cursor/rules):
 # Agentfile Workflow Integration
 When you see /agentfile-run:<workflow-name>, execute the workflow:
 
-## IMPORTANT: Execution Mode Priority
-1. ALWAYS check workflow.yaml for "execution.preferred" field first
-2. If "preferred: ide" → Follow workflow.yaml steps directly (DO NOT run scripts)
-3. If "preferred: cli" → Use scripts/run.sh or scripts/run.ps1
-4. If no execution field → Default to IDE mode (follow workflow.yaml)
+## CRITICAL: ALWAYS Check Execution Mode FIRST
+Before executing ANY workflow, you MUST:
+
+1. Read workflows/<workflow-name>/workflow.yaml
+2. Look for "execution" field
+3. If "execution.preferred: ide" → USE IDE MODE (ignore scripts)
+4. If "execution.preferred: cli" → USE CLI MODE (run scripts)
+5. If no execution field → DEFAULT TO IDE MODE
 
 ## IDE Mode Execution (Preferred)
 When execution.preferred is "ide" or unspecified:
@@ -28,7 +31,9 @@ When execution.preferred is "ide" or unspecified:
 3. Load skill instructions from workflows/<workflow-name>/skills/*.md into user prompt context
 4. Execute each step sequentially using the provided input
 5. Follow the exact output format specified in each agent file
-6. NEVER execute scripts/run.sh or scripts/run.ps1 in IDE mode
+6. CRITICAL: NEVER execute scripts/run.sh or scripts/run.ps1 in IDE mode
+7. CRITICAL: NEVER call anthropic-api or any external CLI tools
+8. CRITICAL: Use your own LLM capabilities to execute steps
 
 ## CLI Mode Execution
 When execution.preferred is "cli":

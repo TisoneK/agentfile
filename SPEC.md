@@ -24,13 +24,21 @@ A conforming Agentfile workflow directory MUST contain:
     <role>.md
   skills/                # Optional. Reusable skill instruction files.
     <skill-name>.md
-  scripts/               # Optional. Runtime scripts for CLI execution.
-    run.sh
-    run.ps1
+  scripts/               # Optional. Execution scripts for different modes.
+    ide/                  # IDE agent instructions and prompts.
+      instructions.md     # Step-by-step IDE execution guide.
+      steps.md           # IDE-specific step instructions.
+    cli/                  # CLI runtime scripts.
+      run.sh             # Unix/Linux execution script.
+      run.ps1            # Windows PowerShell script.
+    README.md              # Execution mode documentation.
   outputs/               # Optional. Runtime artifacts. Should be gitignored.
 ```
 
-**Note:** The `scripts/` directory is optional when using IDE agents (they execute steps directly) but required when using the CLI `agentfile run` command which needs shell scripts for orchestration.
+**Note:** The `scripts/` directory supports dual execution modes:
+- **IDE agents** use `scripts/ide/` instructions for guidance (no external dependencies)
+- **CLI runtime** uses `scripts/cli/` shell scripts for automation
+- Workflows can support both modes for maximum flexibility
 
 ---
 

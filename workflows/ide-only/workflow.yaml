@@ -1,0 +1,24 @@
+name: ide-only
+version: 1.0.0
+specVersion: "1.0"
+description: >
+  A simple IDE-only workflow that demonstrates pure workflow.yaml execution.
+  Takes a topic and creates a brief analysis.
+
+execution:
+  preferred: "ide"
+
+trigger:
+  type: natural-language
+  input_var: AGENT_INPUT
+
+steps:
+  - id: analyze
+    name: Analyze Topic
+    agent: agents/analyzer.md
+    skill: skills/analyze.md
+    input: $AGENT_INPUT
+    goal: >
+      Provide a concise analysis of the given topic with key insights.
+      Focus on understanding and clarity.
+    produces: outputs/analysis.md
