@@ -253,8 +253,8 @@ agentfile setup-ide roo        # For Roo
 | Workflow | Description |
 |----------|-------------|
 | `examples/hello-world` | **Start here** — the simplest possible workflow. One agent, one skill, no config needed |
-| `examples/code-reviewer` | Reviews code for bugs, security issues, and improvements |
 | `examples/pr-summarizer` | Summarizes pull request diffs into structured reports |
+| `workflows/code-reviewer` | Reviews code for bugs, security issues, and improvements |
 | `workflows/slash-demo` | **Slash command demo** — perfect for testing `/agentfile-run:slash-demo` |
 | `workflows/workflow-creator` | Meta-workflow — generates new workflows from a natural language description |
 
@@ -330,10 +330,13 @@ agentfile/
     workflow.schema.json           # JSON Schema (IDE autocomplete + validation)
   examples/
     hello-world/                 # Example: minimal workflow
-    code-reviewer/               # Example: code review workflow
     pr-summarizer/               # Example: PR summary workflow
   workflows/
+    code-reviewer/               # Example: code review workflow
+    slash-demo/                  # Demo: slash command testing
     workflow-creator/            # Meta-workflow: generates new workflows
+    test-workflow/               # Test workflow for validation
+    ide-only/                   # IDE-only execution demo
   shared/
     AGENTS.md                    # Global agent rules
     project.md                   # Project-level conventions
