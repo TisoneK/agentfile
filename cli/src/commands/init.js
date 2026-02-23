@@ -48,7 +48,8 @@ It is agent-agnostic — does not reference any specific LLM provider or IDE.
 - Workflow configs: \`workflow.yaml\`
 - Agents: \`agents/<role>.md\`
 - Skills: \`skills/<skill-name>.md\`
-- Step outputs: \`outputs/<step-id>-<artifact>.<ext>\`
+- Generation artifacts: \`artifacts/<workflow-name>/<run-id>/<step-id>-<artifact>.<ext>\`
+- Runtime step outputs: \`outputs/<step-id>-<artifact>.<ext>\`
 
 ## Agent Behavior
 - Be concise and structured in outputs
@@ -79,6 +80,10 @@ These rules apply to every agent in every workflow.
   // ── .gitignore ─────────────────────────────────────────────────────────────
   writeFile(path.join(cwd, '.gitignore'), `# Agentfile runtime artifacts
 outputs/
+
+# Agentfile artifact staging — run directories are transient
+artifacts/**/
+!artifacts/.gitkeep
 
 # Environment files
 .env
@@ -156,15 +161,18 @@ Create a new workflow using the \`workflow-creator\` pipeline.
 1. Set \`WORKFLOW_NAME\` = the name argument
 2. Set \`WORKFLOW_REQUEST\` = \`"Create a workflow named <n>. <description>"\`
 3. Read \`workflows/workflow-creator/scripts/ide/instructions.md\` — follow it exactly
-4. Execute the full workflow-creator pipeline:
-   - **Step 1 (Clarify):** Load \`workflows/workflow-creator/agents/analyst.md\` + \`workflows/workflow-creator/skills/ask-clarifying.md\`. Produce \`workflows/workflow-creator/outputs/01-clarification.md\`. Wait for human approval.
-   - **Step 2 (Design):** Load \`workflows/workflow-creator/agents/architect.md\` + \`workflows/workflow-creator/skills/design-workflow.md\`. Produce \`workflows/workflow-creator/outputs/02-design.md\`. Wait for human approval.
-   - **Step 3 (Generate YAML):** Load generator + \`workflows/workflow-creator/skills/generate-yaml.md\`. Produce \`workflows/workflow-creator/outputs/03-workflow.yaml\`.
-   - **Step 4 (Generate Agents):** Load generator + \`workflows/workflow-creator/skills/generate-agent.md\`. Produce \`workflows/workflow-creator/outputs/04-agents/_all.md\`.
-   - **Step 5 (Generate Skills):** Load generator + \`workflows/workflow-creator/skills/generate-skill.md\`. Produce \`workflows/workflow-creator/outputs/05-skills/_all.md\`.
-   - **Step 6 (Generate Scripts):** Load generator + \`workflows/workflow-creator/skills/generate-dual-scripts.md\`. Produce \`workflows/workflow-creator/outputs/06-scripts/_all.md\`.
-   - **Step 7 (Review):** Load \`workflows/workflow-creator/agents/reviewer.md\` + \`workflows/workflow-creator/skills/review-workflow.md\`. Produce \`workflows/workflow-creator/outputs/07-review.md\`. Wait for human approval.
-   - **Step 8 (Register):** Run \`bash workflows/workflow-creator/scripts/ide/register.sh\` (Unix) or \`pwsh workflows/workflow-creator/scripts/ide/register.ps1\` (Windows). No API key needed.
+4. Generate \`RUN_ID\` = current UTC timestamp \`YYYY-MM-DDTHH-MM-SS\` (e.g. \`2026-02-23T10-41-22\`).
+5. Set \`ARTIFACT_DIR\` = \`artifacts/{workflow_name}/{run_id}/\`
+6. Execute the full workflow-creator pipeline:
+   - **Step 0 (Init):** Create \`ARTIFACT_DIR\`. Write initial \`manifest.json\` using \`skills/generate-manifest.md\`. Status: \`generating\`, all steps \`pending\`.
+   - **Step 1 (Clarify):** Load \`agents/analyst.md\` + \`skills/ask-clarifying.md\`. Produce \`{ARTIFACT_DIR}/01-clarification.md\`. Update manifest. Wait for human approval.
+   - **Step 2 (Design):** Load \`agents/architect.md\` + \`skills/design-workflow.md\`. Input: \`{ARTIFACT_DIR}/01-clarification.md\`. Produce \`{ARTIFACT_DIR}/02-design.md\`. Update manifest. Wait for human approval.
+   - **Step 3 (Generate YAML):** Load generator + \`skills/generate-yaml.md\`. Produce \`{ARTIFACT_DIR}/03-workflow.yaml\`. Register in manifest.
+   - **Step 4 (Generate Agents):** Load generator + \`skills/generate-agent.md\`. Produce \`{ARTIFACT_DIR}/04-agents/\`. Register in manifest.
+   - **Step 5 (Generate Skills):** Load generator + \`skills/generate-skill.md\`. Produce \`{ARTIFACT_DIR}/05-skills/\`. Register in manifest.
+   - **Step 6 (Generate Scripts):** Load generator + \`skills/generate-dual-scripts.md\`. Produce \`{ARTIFACT_DIR}/06-scripts/\`. Register in manifest.
+   - **Step 7 (Review):** Load \`agents/reviewer.md\` + \`skills/review-workflow.md\`. Produce \`{ARTIFACT_DIR}/07-review.md\`. Set manifest \`status: validated\`. Wait for human approval.
+   - **Step 8 (Promote):** Run \`bash workflows/workflow-creator/scripts/ide/register.sh {ARTIFACT_DIR}\` (Unix) or \`pwsh ... {ARTIFACT_DIR}\` (Windows). Promotes to \`workflows/{name}/\`, archives to \`outputs/{name}/{run_id}/build/\`. No API key needed.
 
 **Never** create a \`.md\` file directly in \`workflows/\`. **Never** skip steps. **Never** run \`scripts/cli/\` scripts.
 
@@ -179,7 +187,7 @@ Scan \`workflows/*/workflow.yaml\`. For each, read \`name\` and \`description\`.
 - **Never run \`scripts/cli/\` scripts in IDE mode** — they require \`ANTHROPIC_API_KEY\` and will fail
 - **Always read \`scripts/ide/instructions.md\`** before executing any workflow
 - **Always wait at \`gate: human-approval\` steps** — do not proceed without confirmation
-- **Outputs go in \`workflows/<n>/outputs/\`** — never in the project root or \`shared/\`
+- **Generation artifacts go in \`artifacts/<workflow-name>/<run-id>/\`** — never directly in \`workflows/\` or \`outputs/\`
 `);
   log.success('Created AGENTS.md');
 

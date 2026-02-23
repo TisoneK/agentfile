@@ -3,11 +3,19 @@ set -euo pipefail
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 WORKFLOW_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SHARED_DIR="$WORKFLOW_DIR/../../../shared"
-OUTPUTS_DIR="$WORKFLOW_DIR/outputs"
+PROJECT_ROOT="$(cd "$WORKFLOW_DIR/../../../.." && pwd)"
+SHARED_DIR="$PROJECT_ROOT/shared"
 API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is not set}"
 MODEL="claude-sonnet-4-6"
-mkdir -p "$OUTPUTS_DIR"
+
+# Artifact staging — all generation files go here, not in outputs/
+RUN_ID="$(date -u '+%Y-%m-%dT%H-%M-%S')"
+WORKFLOW_NAME_PLACEHOLDER="__WORKFLOW_NAME__"  # resolved after clarify step
+ARTIFACT_BASE="$PROJECT_ROOT/artifacts"
+# ARTIFACT_DIR is set after step 1 once workflow name is known from WORKFLOW_REQUEST
+# For now, use a temp dir; it will be renamed after clarification
+ARTIFACT_DIR="$ARTIFACT_BASE/.pending-$RUN_ID"
+mkdir -p "$ARTIFACT_DIR"
 
 # ── Helper Functions ────────────────────────────────────────────────────────────
 call_api() {
@@ -66,8 +74,22 @@ step_clarify() {
   local user
   user="$(load_file "$WORKFLOW_DIR/skills/ask-clarifying.md")"$'\n\n'"---"$'\n\n'"User's workflow request:"$'\n'"$WORKFLOW_REQUEST"
 
-  call_api "$system" "$user" > "$OUTPUTS_DIR/01-clarification.md"
-  human_gate "Clarify Request" "$OUTPUTS_DIR/01-clarification.md"
+  call_api "$system" "$user" > "$ARTIFACT_DIR/01-clarification.md"
+  human_gate "Clarify Request" "$ARTIFACT_DIR/01-clarification.md"
+
+  # Now that we have clarification, extract workflow name and rename artifact dir
+  local wf_name
+  wf_name=$(grep -i "^## Workflow" "$ARTIFACT_DIR/01-clarification.md" | head -1 | sed 's/.*: *//' | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd 'a-z0-9-' || true)
+  if [[ -z "$wf_name" ]]; then
+    wf_name=$(echo "$WORKFLOW_REQUEST" | grep -oP "(?<=named )[a-z0-9-]+" | head -1 || true)
+  fi
+  if [[ -n "$wf_name" ]]; then
+    local final_dir="$ARTIFACT_BASE/$wf_name/$RUN_ID"
+    mkdir -p "$(dirname "$final_dir")"
+    mv "$ARTIFACT_DIR" "$final_dir"
+    ARTIFACT_DIR="$final_dir"
+    log "Artifact directory: $ARTIFACT_DIR"
+  fi
 }
 
 step_design() {
@@ -75,10 +97,10 @@ step_design() {
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/architect.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/design-workflow.md")"$'\n\n'"---"$'\n\n'"Clarification summary:"$'\n'"$(load_file "$OUTPUTS_DIR/01-clarification.md")"
+  user="$(load_file "$WORKFLOW_DIR/skills/design-workflow.md")"$'\n\n'"---"$'\n\n'"Clarification summary:"$'\n'"$(load_file "$ARTIFACT_DIR/01-clarification.md")"
 
-  call_api "$system" "$user" > "$OUTPUTS_DIR/02-design.md"
-  human_gate "Design Workflow" "$OUTPUTS_DIR/02-design.md"
+  call_api "$system" "$user" > "$ARTIFACT_DIR/02-design.md"
+  human_gate "Design Workflow" "$ARTIFACT_DIR/02-design.md"
 }
 
 step_generate_config() {
@@ -86,46 +108,46 @@ step_generate_config() {
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-yaml.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\n'"Task: Generate ONLY the workflow.yaml file. Output the raw YAML with no surrounding prose or code fences."
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-yaml.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'"Task: Generate ONLY the workflow.yaml file. Output the raw YAML with no surrounding prose or code fences."
 
-  call_api "$system" "$user" > "$OUTPUTS_DIR/03-workflow.yaml"
-  log "  ✓ Generated: outputs/03-workflow.yaml"
+  call_api "$system" "$user" > "$ARTIFACT_DIR/03-workflow.yaml"
+  log "  ✓ Generated: $ARTIFACT_DIR/03-workflow.yaml"
 }
 
 step_generate_agents() {
   log "▶ Step 4/8: Generate Agent Files"
-  mkdir -p "$OUTPUTS_DIR/04-agents"
+  mkdir -p "$ARTIFACT_DIR/04-agents"
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-agent.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\n'"Task: Generate ALL agent .md files. Delimit each file with:"$'\n'"=##FILE: agents/<n>.md##"$'\n'"<contents>"$'\n'"##END##"
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-agent.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'"Task: Generate ALL agent .md files. Delimit each file with:"$'\n'"=##FILE: agents/<n>.md##"$'\n'"<contents>"$'\n'"##END##"
 
-  call_api "$system" "$user" > "$OUTPUTS_DIR/04-agents/_all.md"
-  log "  ✓ Generated: outputs/04-agents/_all.md"
+  call_api "$system" "$user" > "$ARTIFACT_DIR/04-agents/_all.md"
+  log "  ✓ Generated: $ARTIFACT_DIR/04-agents/_all.md"
 }
 
 step_generate_skills() {
   log "▶ Step 5/8: Generate Skill Files"
-  mkdir -p "$OUTPUTS_DIR/05-skills"
+  mkdir -p "$ARTIFACT_DIR/05-skills"
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-skill.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\n'"Task: Generate ALL skill .md files. Delimit each file with:"$'\n'"##FILE: skills/<n>.md##="$'\n'"<contents>"$'\n'"##END##"
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-skill.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'"Task: Generate ALL skill .md files. Delimit each file with:"$'\n'"##FILE: skills/<n>.md##="$'\n'"<contents>"$'\n'"##END##"
 
-  call_api "$system" "$user" > "$OUTPUTS_DIR/05-skills/_all.md"
-  log "  ✓ Generated: outputs/05-skills/_all.md"
+  call_api "$system" "$user" > "$ARTIFACT_DIR/05-skills/_all.md"
+  log "  ✓ Generated: $ARTIFACT_DIR/05-skills/_all.md"
 }
 
 step_generate_scripts() {
   log "▶ Step 6/8: Generate Scripts"
-  mkdir -p "$OUTPUTS_DIR/06-scripts"
+  mkdir -p "$ARTIFACT_DIR/06-scripts"
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-script.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\n'"Task: Generate run.sh AND run.ps1. Delimit each file with:"$'\n'"##FILE: scripts/run.sh##"$'\n'"<contents>"$'\n'"##END##"
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-script.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'"Task: Generate run.sh AND run.ps1. Delimit each file with:"$'\n'"##FILE: scripts/run.sh##"$'\n'"<contents>"$'\n'"##END##"
 
-  call_api "$system" "$user" > "$OUTPUTS_DIR/06-scripts/_all.md"
-  log "  ✓ Generated: outputs/06-scripts/_all.md"
+  call_api "$system" "$user" > "$ARTIFACT_DIR/06-scripts/_all.md"
+  log "  ✓ Generated: $ARTIFACT_DIR/06-scripts/_all.md"
 }
 
 step_review() {
@@ -134,19 +156,19 @@ step_review() {
   system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/reviewer.md")"
   local user
   user="$(load_file "$WORKFLOW_DIR/skills/review-workflow.md")"$'\n\n'"---"$'\n\n'
-  user+="Design document:"$'\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\n'
-  user+="workflow.yaml:"$'\n'"$(load_file "$OUTPUTS_DIR/03-workflow.yaml")"$'\n\n'
-  user+="Agents:"$'\n'"$(load_file "$OUTPUTS_DIR/04-agents/_all.md")"$'\n\n'
-  user+="Skills:"$'\n'"$(load_file "$OUTPUTS_DIR/05-skills/_all.md")"$'\n\n'
-  user+="Scripts:"$'\n'"$(load_file "$OUTPUTS_DIR/06-scripts/_all.md")"
+  user+="Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'
+  user+="workflow.yaml:"$'\n'"$(load_file "$ARTIFACT_DIR/03-workflow.yaml")"$'\n\n'
+  user+="Agents:"$'\n'"$(load_file "$ARTIFACT_DIR/04-agents/_all.md")"$'\n\n'
+  user+="Skills:"$'\n'"$(load_file "$ARTIFACT_DIR/05-skills/_all.md")"$'\n\n'
+  user+="Scripts:"$'\n'"$(load_file "$ARTIFACT_DIR/06-scripts/_all.md")"
 
-  call_api "$system" "$user" 1024 0 > "$OUTPUTS_DIR/07-review.md"
-  human_gate "Review" "$OUTPUTS_DIR/07-review.md"
+  call_api "$system" "$user" 1024 0 > "$ARTIFACT_DIR/07-review.md"
+  human_gate "Review" "$ARTIFACT_DIR/07-review.md"
 }
 
 step_register() {
   log "▶ Step 8/8: Register Workflow"
-  bash "$WORKFLOW_DIR/scripts/register.sh"
+  bash "$WORKFLOW_DIR/../ide/register.sh" "$ARTIFACT_DIR"
 }
 
 # ── Main ────────────────────────────────────────────────────────────────────────

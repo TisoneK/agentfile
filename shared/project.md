@@ -23,7 +23,8 @@ It is agent-agnostic — it does not reference any specific LLM provider or IDE.
 - Step outputs: `outputs/<step-id>-<artifact>.<ext>`
 
 ### Workflow Steps
-- Each step produces exactly one artifact in `outputs/`
+- Generation steps produce artifacts in `artifacts/<workflow-name>/<run-id>/`
+- Runtime steps produce artifacts in `outputs/` (local to each workflow)
 - Steps with `gate: human-approval` pause for user confirmation
 - Steps with `action: shell` run a script without an LLM call
 
@@ -35,10 +36,25 @@ It is agent-agnostic — it does not reference any specific LLM provider or IDE.
 
 ## Directory Layout
 ```
-<workflow>/
-  workflow.yaml      # Workflow config (entry point)
-  agents/            # Agent .md files
-  skills/            # Skill .md files
-  scripts/           # Bash + PowerShell scripts
-  outputs/           # Runtime artifacts (gitignored)
+<project-root>/
+  artifacts/                    # Generation staging workspace
+    <workflow-name>/
+      <run-id>/                 # e.g. 2026-02-23T10-41-22
+        manifest.json           # Lifecycle control plane
+        01-clarification.md
+        02-design.md
+        ...
+  workflows/
+    <workflow-name>/            # Canonical workflow (version-controlled)
+      workflow.yaml             # Workflow config (entry point)
+      workflow_status.json      # Pointer to originating build
+      agents/                   # Agent .md files
+      skills/                   # Skill .md files
+      scripts/
+        ide/                    # IDE instructions + API-key-free scripts
+        cli/                    # API-calling scripts (CLI mode only)
+      outputs/                  # Runtime artifacts (gitignored)
+  outputs/
+    <workflow-name>/
+      <run-id>/build/           # Archived generation run
 ```

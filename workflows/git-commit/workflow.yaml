@@ -1,0 +1,60 @@
+name: git-commit
+version: 1.0.0
+description: >
+  Automates the git commit process by analyzing staged changes, generating conventional commit messages,
+  getting user approval, and executing the commit with optional push to remote repository.
+
+trigger:
+  type: command
+  input_var: WORKFLOW_INPUT
+
+output:
+  directory: workflows/git-commit
+
+steps:
+  - id: check-staged
+    name: Check Staged Changes
+    agent: agents/git-analyzer.md
+    skill: skills/analyze-staged.md
+    input: $WORKFLOW_INPUT
+    goal: >
+      Analyze the git repository state and staged changes to understand what will be committed
+    produces: outputs/01-staged-analysis.md
+
+  - id: generate-message
+    name: Generate Commit Message
+    agent: agents/commit-generator.md
+    skill: skills/conventional-commits.md
+    input: outputs/01-staged-analysis.md
+    goal: >
+      Generate a conventional commit message based on the analyzed staged changes
+    produces: outputs/02-commit-message.md
+
+  - id: approve-message
+    name: Approve Message
+    agent: agents/interactive-approver.md
+    skill: skills/get-approval.md
+    input: outputs/02-commit-message.md
+    goal: >
+      Present the generated commit message to the user for approval or editing
+    produces: outputs/03-approved-message.md
+    gate: human-approval
+
+  - id: execute-commit
+    name: Execute Commit
+    agent: agents/git-executor.md
+    skill: skills/git-operations.md
+    input: outputs/03-approved-message.md
+    goal: >
+      Execute the git commit with the approved message and handle any errors
+    produces: outputs/04-commit-result.md
+
+  - id: optional-push
+    name: Optional Push
+    agent: agents/git-executor.md
+    skill: skills/git-operations.md
+    input: outputs/04-commit-result.md
+    goal: >
+      Optionally push the committed changes to the remote repository
+    produces: outputs/05-push-result.md
+    gate: human-approval

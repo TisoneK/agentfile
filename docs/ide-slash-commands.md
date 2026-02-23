@@ -40,7 +40,7 @@ Creates a new workflow by invoking `workflow-creator` with the given name and de
 /agentfile:create daily-standup Summarize yesterday's commits and open PRs into a standup update
 ```
 
-This invokes the `workflow-creator` pipeline (clarify → design → generate → review → register) in IDE mode — no API key required.
+This invokes the `workflow-creator` pipeline (init → clarify → design → generate → review → promote) in IDE mode — no API key required. All generation artifacts are staged in `artifacts/<workflow-name>/<run-id>/` before being promoted to `workflows/<workflow-name>/`.
 
 ---
 
@@ -87,8 +87,10 @@ Split on the first space after `/agentfile:`:
 **`create`** →
 1. Set `WORKFLOW_NAME` = arg 1
 2. Set `WORKFLOW_REQUEST` = `"Create a workflow named {arg1}. {remaining}"`
-3. Run `workflows/workflow-creator` in IDE mode with that request
-4. The workflow-creator pipeline handles clarification → design → generation → review → registration
+3. Generate `RUN_ID` = current UTC timestamp `YYYY-MM-DDTHH-MM-SS`
+4. Set `ARTIFACT_DIR` = `artifacts/{WORKFLOW_NAME}/{RUN_ID}/`
+5. Run `workflows/workflow-creator` in IDE mode — pipeline writes all artifacts to `ARTIFACT_DIR`
+6. The workflow-creator pipeline handles: init → clarify → design → generate → review → promote
 
 **`run`** → Continue to STEP 3.
 
@@ -169,6 +171,8 @@ Scan and return all `workflows/*/workflow.yaml` names and descriptions.
 |---------|-----|
 | Workflow not found | Check `workflows/<name>/workflow.yaml` exists |
 | `create` gets stuck asking for API key | You ran `scripts/cli/` — switch to `scripts/ide/register.sh` |
+| `create` writes to `outputs/` instead of `artifacts/` | Your `AGENTS.md` or `scripts/ide/instructions.md` is outdated — pull latest |
+| `artifacts/` directory not found | Run `agentfile init` or create `artifacts/.gitkeep` manually |
 | `list` returns nothing | No `workflows/` directory or no `workflow.yaml` files found |
 | Missing execution field | Default to IDE mode |
 | Agent files missing | Continue with available agents, log a warning |

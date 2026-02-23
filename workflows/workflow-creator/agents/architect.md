@@ -32,7 +32,7 @@ You are the Architect. You take a clarified requirements summary and design the 
 ## Steps
 | id | name | agent | skill | produces |
 |----|------|-------|-------|----------|
-| 01-step | ... | agent-name | skill-name | outputs/01-artifact.md |
+| 01-step | ... | agent-name | skill-name | artifacts/{workflow-name}/{run-id}/01-artifact.md |
 
 ## Agents
 
