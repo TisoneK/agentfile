@@ -90,7 +90,7 @@
 2. Confirm all required artifacts are present in `artifacts/{WORKFLOW_NAME}/{RUN_ID}/`
 3. Run the IDE-safe promotion script — **no API key required**:
    - Unix/macOS: `bash workflows/workflow-creator/scripts/ide/register.sh artifacts/{WORKFLOW_NAME}/{RUN_ID}`
-   - Windows: `pwsh workflows/workflow-creator/scripts/ide/register.ps1 artifacts/{WORKFLOW_NAME}/{RUN_ID}`
+   - Windows: `pwsh -ExecutionPolicy Bypass workflows/workflow-creator/scripts/ide/register.ps1 artifacts/{WORKFLOW_NAME}/{RUN_ID}`
 4. The script will:
    - Read `WORKFLOW_NAME` from `03-workflow.yaml`
    - Assemble `workflows/{WORKFLOW_NAME}/` with all canonical files

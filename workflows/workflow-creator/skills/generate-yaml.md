@@ -33,7 +33,7 @@ steps:
   input: <file path or $VAR>         # required
   goal: >                            # required — what this step achieves
     <description>
-  produces: outputs/<artifact>       # required
+  produces: artifacts/<workflow_name>/<run_id>/<artifact>       # required
   gate: human-approval               # optional — pauses for human review
 ```
 

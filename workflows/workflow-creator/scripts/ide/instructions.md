@@ -91,7 +91,7 @@ When an IDE agent sees `/agentfile:create <workflow-name> <description>`, follow
 **Step 8: Promote to Workflow**
 - Load skill: `skills/promote-workflow.md` for validation checklist
 - Run `bash workflows/workflow-creator/scripts/ide/register.sh {ARTIFACT_DIR}` (Unix)
-- Or: `pwsh workflows/workflow-creator/scripts/ide/register.ps1 {ARTIFACT_DIR}` (Windows)
+- Or: `pwsh -ExecutionPolicy Bypass workflows/workflow-creator/scripts/ide/register.ps1 {ARTIFACT_DIR}` (Windows)
 - This script: validates artifact set → assembles `workflows/{WORKFLOW_NAME}/` → archives run to `outputs/{WORKFLOW_NAME}/{RUN_ID}/build/` → writes `workflow_status.json` → updates manifest to `registered`
 - No API key required — pure file I/O
 
