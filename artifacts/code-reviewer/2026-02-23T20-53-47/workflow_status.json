@@ -1,0 +1,31 @@
+{
+  "workflow": "code-reviewer",
+  "run_id": "2026-02-23T20-53-47",
+  "status": "registered",
+  "registered_at": "2026-02-23T20:53:47Z",
+  "artifact_directory": "artifacts/code-reviewer/2026-02-23T20-53-47",
+  "target_directory": "workflows/code-reviewer",
+  "generator": "workflow-creator",
+  "review_status": "PASS_WITH_WARNINGS",
+  "files_generated": 35,
+  "components": {
+    "workflow_config": 1,
+    "agents": 5,
+    "skills": 8,
+    "utility_scripts": 12,
+    "cli_scripts": 2,
+    "ide_scripts": 4,
+    "documentation": 3
+  },
+  "validation": {
+    "yaml_valid": true,
+    "all_files_present": true,
+    "cross_platform_compatible": true,
+    "documentation_complete": true
+  },
+  "next_steps": [
+    "Workflow is ready for use",
+    "Run with: /agentfile:run code-reviewer <input-path>",
+    "Or use IDE mode per scripts/ide/instructions.md"
+  ]
+}
