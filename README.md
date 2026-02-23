@@ -1,73 +1,4 @@
-
-
-/agentfile-run:slash-demo
-Input: artificial intelligence
-
-I'll run the slash-demo workflow with the input "artificial intelligence". Let me first check the workflow structure and then execute it.
-
-Now I'll run the workflow using the CLI command:
-
-Command cd, node in …\Dev\agentfile
-
-cd c:\Users\tison\Dev\agentfile && node cli/src/index.js run workflows/slash-demo "artificial intelligence"
-  Agentfile v1.0.0
-  ✗ Workflow "workflows/slash-demo" not found.IDE
-  ℹ Run `agentfile list` to see available workflows.
-
-Let me check the available workflows and the correct path:
-
-Command cd, node in …\Dev\agentfile
-
-cd c:\Users\tison\Dev\agentfile && node cli/src/index.js list
-flows/slash-demo "artificial intelligence"
-  Agentfile v1.0.0
-  Define LLM workflows as files. Run with any IDE  dir-structure                 v1.0.0    1 step
-  slash-demo                    v1.0.0    1 step
-    A simple demonstration workflow for testing t  workflow-creator              v1.0.0    8 steps
-    A meta-workflow that takes a natural language  Run a workflow:nd.es a 
-    agentfile run <workflow-name> --input "your i
-
-I can see the workflow is available as "slash-demo". Let me run it with the correct syntax:
-
-Command cd, node in …\Dev\agentfile
-
-cd c:\Users\tison\Dev\agentfile && node cli/src/index.js run slash-demo --input "artificial intelligence"
-h-demo --input "artificial intelligence"
-
-  Agentfile v1.0.0
-  Define LLM workflows as files. Run with any IDE agent.
-
-  ✗ Runtime script not found: C:\Users\tison\Dev\agentfile\workflows\slash-demo\scripts\run.ps1
-  ℹ Expected: workflows/slash-demo/scripts/run.ps1
-
-  ℹ Why this happened:
-  ℹ   This workflow was designed for IDE agents (Cursor, Windsurf, Claude Code, etc.)
-  ℹ   but the CLI runtime requires execution scripts.
-
-  ℹ Options:
-  ℹ   1. Use with an IDE agent by loading workflow.yaml and following its steps
-  ℹ   2. Add scripts/run.sh and scripts/run.ps1 to enable CLI execution
-  ℹ   3. Use "agentfile create" to generate a workflow with scripts included
-
-  ℹ Learn more:
-  ℹ   https://github.com/TisoneK/agentfile#ide-agent-compatibility
-
-The workflow requires scripts for CLI execution. Let me create the necessary PowerShell script to run this workflow:
-
-run.ps1
-new
-+47
-$SummaryContent | Out-File -FilePath $OutputPath -Encoding UTF8
- 
-Write-Host "✓ Workflow completed successfully"
-Write-Host "✓ Output written to: $OutputPath"
- 
-
-
-
-Now let me run the workflow again:
-
-Command cd, node in …\Dev\agentfile# Agentfile
+# Agentfile
 
 **Agentfile is workflow-as-files for AI agents.**
 
@@ -136,25 +67,20 @@ agentfile create code-reviewer
 
 ### 4. Open in your IDE agent
 
-**Simple Slash Command (Recommended)**
+**Slash Commands (Recommended)**
 
 ```
-/agentfile-run:code-reviewer
-Input: src/auth.js
+/agentfile:run code-reviewer src/auth.js
+/agentfile:create my-workflow Analyze logs and surface error patterns
+/agentfile:list
 ```
 
-**Cursor / Windsurf** — paste into composer or your rules file:
-
-```
-Load workflow.yaml and follow its steps.
-Load agent definitions from agents/ and skills from skills/.
-Input: <describe what you want reviewed>
-```
+**Cursor / Windsurf** — type any slash command directly in the composer.
 
 **Claude Code:**
 
 ```bash
-claude "Follow workflow.yaml in this folder. Input: src/auth.js"
+claude "/agentfile:run code-reviewer src/auth.js"
 ```
 
 **Cline / Roo / GitHub Copilot** — reference `workflow.yaml` in your system prompt or workspace instructions.
@@ -255,7 +181,7 @@ agentfile setup-ide roo        # For Roo
 | `examples/hello-world` | **Start here** — the simplest possible workflow. One agent, one skill, no config needed |
 | `examples/pr-summarizer` | Summarizes pull request diffs into structured reports |
 | `workflows/code-reviewer` | Reviews code for bugs, security issues, and improvements |
-| `workflows/slash-demo` | **Slash command demo** — perfect for testing `/agentfile-run:slash-demo` |
+| `workflows/slash-demo` | **Slash command demo** — perfect for testing `/agentfile:run slash-demo hello` |
 | `workflows/workflow-creator` | Meta-workflow — generates new workflows from a natural language description |
 
 Clone and point your IDE agent at `examples/hello-world` to get started in under a minute:
@@ -267,8 +193,7 @@ git clone https://github.com/TisoneK/agentfile
 Then in your IDE agent:
 
 ```
-/agentfile-run:hello-world
-Input: recursion
+/agentfile:run hello-world recursion
 ```
 
 ---
@@ -277,45 +202,41 @@ Input: recursion
 
 ### Slash Command Format
 
-The simplest way to run workflows in any IDE agent:
+Agentfile uses a single `/agentfile:` namespace with three subcommands:
 
 ```
-/agentfile-run:<workflow-name>
-Input: <your-input-here>
+/agentfile:run <workflow-name> <args>
+/agentfile:create <new-workflow-name> <description>
+/agentfile:list
 ```
 
 **Examples:**
 ```
-/agentfile-run:hello-world
-Input: recursion
-
-/agentfile-run:slash-demo
-Input: artificial intelligence
-
-/agentfile-run:code-reviewer
-Input: src/components/Button.js
-
-/agentfile-run:pr-summarizer
-Input: https://github.com/user/repo/pull/123
+/agentfile:run hello-world recursion
+/agentfile:run code-reviewer src/components/Button.js
+/agentfile:run pr-summarizer https://github.com/user/repo/pull/123
+/agentfile:create security-scanner Scan for OWASP vulnerabilities and produce a risk report
+/agentfile:list
 ```
 
 ### How It Works
 
-When an IDE agent sees `/agentfile-run:<workflow-name>`, it:
+When an IDE agent sees an `/agentfile:` command, it:
 
-1. **Locates** `workflows/<workflow-name>/workflow.yaml`
-2. **Loads** all agent definitions from `agents/*.md`
-3. **Injects** skills from `skills/*.md` 
-4. **Executes** each step sequentially
-5. **Uses** the provided input for the workflow
+1. **Parses** the subcommand (`run` / `create` / `list`)
+2. **`list`** — scans `workflows/*/workflow.yaml` and returns names + descriptions, no LLM needed
+3. **`create`** — invokes `workflow-creator` in IDE mode with the name and description pre-set
+4. **`run`** — locates `workflows/<name>/workflow.yaml`, checks `execution.preferred`, loads agents and skills, executes steps sequentially
+
+→ Full IDE processing guide: [docs/ide-slash-commands.md](./docs/ide-slash-commands.md)
 
 ### IDE-Specific Instructions
 
 | IDE | How to Use |
 |-----|------------|
-| **Cursor** | Type `/agentfile-run:name` in composer |
+| **Cursor** | Type `/agentfile:run name args` in composer |
 | **Windsurf** | Use slash command in cascade or rules |
-| **Claude Code** | `claude "/agentfile-run:name"` |
+| **Claude Code** | `claude "/agentfile:run name args"` |
 | **GitHub Copilot** | Add to workspace instructions |
 | **Cline/Roo** | Include in system prompt |
 
@@ -325,26 +246,32 @@ When an IDE agent sees `/agentfile-run:<workflow-name>`, it:
 
 ```
 agentfile/
+  AGENTS.md                        # ← IDE agents read this first — slash command protocol
+  CLAUDE.md                        # Claude Code pointer → AGENTS.md
+  .cursorrules                     # Cursor pointer → AGENTS.md
+  .windsurfrules                   # Windsurf pointer → AGENTS.md
+  .clinerules                      # Cline/Roo pointer → AGENTS.md
   SPEC.md                          # Formal specification
   schema/
     workflow.schema.json           # JSON Schema (IDE autocomplete + validation)
   examples/
-    hello-world/                 # Example: minimal workflow
-    pr-summarizer/               # Example: PR summary workflow
+    hello-world/                   # Example: minimal workflow
+    pr-summarizer/                 # Example: PR summary workflow
   workflows/
-    code-reviewer/               # Example: code review workflow
-    slash-demo/                  # Demo: slash command testing
-    workflow-creator/            # Meta-workflow: generates new workflows
-    test-workflow/               # Test workflow for validation
-    ide-only/                   # IDE-only execution demo
+    code-reviewer/                 # Example: code review workflow
+    slash-demo/                    # Demo: slash command testing
+    workflow-creator/              # Meta-workflow: generates new workflows
+    test-workflow/                 # Test workflow for validation
+    ide-only/                      # IDE-only execution demo
   shared/
-    AGENTS.md                    # Global agent rules
-    project.md                   # Project-level conventions
-  cli/                          # Node.js CLI source
+    AGENTS.md                      # Global agent rules (injected in CLI calls)
+    project.md                     # Project-level conventions (injected in CLI calls)
+  cli/                             # Node.js CLI source
   docs/
-    concepts.md                  # Deep dive: how everything works
+    concepts.md                    # Deep dive: how everything works
+    ide-slash-commands.md          # Full slash command reference
   ~/.agentfile/
-    config.json                 # User configuration (API keys, defaults)
+    config.json                    # User configuration (API keys, defaults)
 ```
 
 ---
@@ -390,7 +317,6 @@ Agentfile workflows support two execution modes with dual script support:
 # workflow.yaml
 execution:
   preferred: "ide"    # or "cli"
-  fallback: "cli"      # backup option
 ```
 
 **Generated Structure:**

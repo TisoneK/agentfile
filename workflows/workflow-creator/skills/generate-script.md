@@ -117,7 +117,7 @@ step_generate_agents() {
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-agent.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate all agent .md files. Delimit each with === FILE: === markers.'
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-agent.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate all agent .md files. Delimit each with ##FILE: === markers.'
 
   mkdir -p "$OUTPUTS_DIR/04-agents"
   call_api "$system" "$user" > "$OUTPUTS_DIR/04-agents/_all.md"
@@ -129,7 +129,7 @@ step_generate_skills() {
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-skill.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate all skill .md files. Delimit each with === FILE: === markers.'
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-skill.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate all skill .md files. Delimit each with ##FILE: === markers.'
 
   mkdir -p "$OUTPUTS_DIR/05-skills"
   call_api "$system" "$user" > "$OUTPUTS_DIR/05-skills/_all.md"
@@ -141,7 +141,7 @@ step_generate_scripts() {
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-script.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate run.sh and run.ps1. Delimit each with === FILE: === markers.'
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-script.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate run.sh and run.ps1. Delimit each with ##FILE: === markers.'
 
   mkdir -p "$OUTPUTS_DIR/06-scripts"
   call_api "$system" "$user" > "$OUTPUTS_DIR/06-scripts/_all.md"

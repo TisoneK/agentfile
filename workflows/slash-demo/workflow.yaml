@@ -2,7 +2,7 @@ name: slash-demo
 version: 1.0.0
 specVersion: "1.0"
 description: >
-  A simple demonstration workflow for testing the /agentfile-run slash command.
+  A simple demonstration workflow for testing the /agentfile: slash commands.
   Takes a topic and creates a brief summary with key points.
 
 trigger:

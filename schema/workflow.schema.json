@@ -37,6 +37,26 @@
       "type": "string",
       "description": "Human-readable description of what this workflow does."
     },
+    "execution": {
+      "type": "object",
+      "description": "Execution preferences for this workflow.",
+      "additionalProperties": false,
+      "properties": {
+        "preferred": {
+          "type": "string",
+          "description": "Preferred execution mode for IDE environments.",
+          "enum": [
+            "ide",
+            "cli"
+          ],
+          "default": "ide",
+          "examples": [
+            "ide",
+            "cli"
+          ]
+        }
+      }
+    },
     "trigger": {
       "type": "object",
       "description": "Defines how and when this workflow is started.",

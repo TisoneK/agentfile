@@ -45,15 +45,15 @@ Skills are injected at the top of the user prompt, before the input data.
 When the Generator produces multiple files in one API call, it uses this format:
 
 ```
-=== FILE: agents/analyst.md ===
+##FILE: agents/analyst.md##
 # Agent: Analyst
 ...
-=== END FILE ===
+##END##
 
-=== FILE: agents/architect.md ===
+##FILE: agents/architect.md##
 # Agent: Architect
 ...
-=== END FILE ===
+##END##
 ```
 
 The `register.sh` / `register.ps1` scripts parse this format line by line and write each file to its correct location under the new workflow's folder.

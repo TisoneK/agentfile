@@ -95,8 +95,9 @@ steps:
     name: Register Workflow
     action: shell
     script:
-      bash: scripts/register.sh
-      pwsh: scripts/register.ps1
+      bash: scripts/ide/register.sh
+      pwsh: scripts/ide/register.ps1
     goal: >
       Move all approved generated files into the correct workflow folder
-      under workflows/{workflow_name}/.
+      under workflows/{workflow_name}/. Uses IDE-safe scripts that require
+      no API key — pure file assembly only.

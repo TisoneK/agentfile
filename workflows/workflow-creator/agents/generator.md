@@ -21,9 +21,9 @@ You are the Generator. You take a design document and produce complete, working 
 - All API calls use the model and settings from `shared/project.md`
 - When generating multiple files in one step, clearly delimit each with:
   ```
-  === FILE: path/to/file.ext ===
+  ##FILE: path/to/file.ext##
   <contents>
-  === END FILE ===
+  ##END##
   ```
 
 ## What Good Output Looks Like
