@@ -62,7 +62,9 @@ Only generate extras that the workflow genuinely needs. Examples:
 
 ## Step 2 — Generate CLI Scripts (`scripts/cli/`)
 
-CLI scripts call the Anthropic API directly and must be self-contained, robust, and runnable without an IDE.
+CLI scripts call the Anthropic API directly and **must implement execution-state**. Every `run.sh` and `run.ps1` must include the full state management pattern from `generate-execution-state.md` and `generate-script.md` — `init_state()`, `check_gate()`, `step_start()`, `step_complete()`, `step_fail()`, `step_await_approval()`, and `--resume` support. This is not optional.
+
+See `generate-script.md` for the complete templates. The abbreviated structure is:
 
 ### `scripts/cli/run.sh` Template
 

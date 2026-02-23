@@ -139,10 +139,11 @@ steps:
       - artifacts/{workflow_name}/{run_id}/06-scripts/utils/
     goal: >
       Generate BOTH CLI and IDE execution scripts with equal completeness. CLI scripts
-      (run.sh, run.ps1) must call into utils/ scripts for all non-LLM work — never
-      inline file I/O or transformation logic. IDE scripts (instructions.md, steps.md,
-      register.sh, register.ps1) must reference utils/ scripts where the user needs to
-      run them manually. Both paths must be fully implemented. Write to
+      (run.sh, run.ps1) MUST implement execution-state — init_state(), check_gate(),
+      step_start(), step_complete(), step_fail(), step_await_approval(), and --resume
+      support via locate_run(). Gated steps must call step_await_approval and exit 0.
+      Both must call into utils/ scripts for non-LLM work. IDE scripts (instructions.md,
+      steps.md, register.sh, register.ps1) reference utils/ where needed. Write to
       artifacts/{workflow_name}/{run_id}/06-scripts/cli/ and 06-scripts/ide/.
       Register each file with the appropriate role in manifest.json.
     produces: artifacts/{workflow_name}/{run_id}/06-scripts/

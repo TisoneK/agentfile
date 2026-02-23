@@ -40,11 +40,14 @@ Teach the Reviewer how to systematically validate a complete workflow package fo
 - Does `run.sh` start with `#!/usr/bin/env bash` and `set -euo pipefail`?
 - Does `run.ps1` start with `#!/usr/bin/env pwsh` and `$ErrorActionPreference = "Stop"`?
 - Is `run.ps1` as fully implemented as `run.sh`? (a skeleton `run.ps1` is a **BLOCKING** defect)
+- Does `run.sh` implement execution-state? Check for: `init_state()`, `check_gate()`, `step_start()`, `step_complete()`, `step_fail()` (BLOCKING if missing)
+- Does `run.sh` support `--resume` via `locate_run()`? (BLOCKING if missing)
+- Do gated steps call `step_await_approval` and `exit 0` — not terminal prompts? (BLOCKING if not)
 - Do `run.sh` and `run.ps1` call into `utils/` scripts instead of inlining non-LLM logic? (BLOCKING if not)
 - Does the script load `project.md` + `AGENTS.md` + agent file into the system prompt?
 - Does every step in workflow.yaml have a corresponding function in both scripts?
 - Does the script validate required env vars?
-- Are human gates implemented for all steps with `gate: human-approval`?
+- Do step functions have meaningful `custom` fields in `step_complete()` — not empty `{}`?
 
 **IDE scripts (scripts/ide/)**
 - Is `scripts/ide/instructions.md` present and complete?
