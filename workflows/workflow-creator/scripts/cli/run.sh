@@ -138,13 +138,25 @@ step_generate_skills() {
   log "  ✓ Generated: $ARTIFACT_DIR/05-skills/_all.md"
 }
 
-step_generate_scripts() {
-  log "▶ Step 6/8: Generate Scripts"
-  mkdir -p "$ARTIFACT_DIR/06-scripts"
+step_generate_utils() {
+  log "▶ Step 6/9: Generate Utility Scripts"
+  mkdir -p "$ARTIFACT_DIR/06-scripts/utils"
   local system
   system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
   local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-script.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'"Task: Generate run.sh AND run.ps1. Delimit each file with:"$'\n'"##FILE: scripts/run.sh##"$'\n'"<contents>"$'\n'"##END##"
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-utils.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'"Task: Identify every non-LLM operation in this workflow (file reads, writes, validation, transformation, etc.) and generate a dedicated utility script (.sh and .ps1) for each. These will be called by both cli/ and ide/ scripts. Delimit each file with:"$'\n'"##FILE: scripts/utils/<name>.sh##"$'\n'"<contents>"$'\n'"##END##"
+
+  call_api "$system" "$user" > "$ARTIFACT_DIR/06-scripts/utils/_all.md"
+  log "  ✓ Generated: $ARTIFACT_DIR/06-scripts/utils/_all.md"
+}
+
+step_generate_scripts() {
+  log "▶ Step 7/9: Generate CLI and IDE Scripts"
+  mkdir -p "$ARTIFACT_DIR/06-scripts/cli" "$ARTIFACT_DIR/06-scripts/ide"
+  local system
+  system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
+  local user
+  user="$(load_file "$WORKFLOW_DIR/skills/generate-dual-scripts.md")"$'\n\n'"---"$'\n\n'"Design document:"$'\n'"$(load_file "$ARTIFACT_DIR/02-design.md")"$'\n\n'"Utility scripts already generated:"$'\n'"$(load_file "$ARTIFACT_DIR/06-scripts/utils/_all.md")"$'\n\n'"Task: Generate ALL CLI scripts (run.sh, run.ps1) AND IDE scripts (instructions.md, steps.md, register.sh, register.ps1). CLI and IDE scripts have equal priority — run.ps1 must be as complete as run.sh. Both must call into utils/ scripts for non-LLM work, not inline that logic. Delimit each file with:"$'\n'"##FILE: scripts/cli/run.sh##"$'\n'"<contents>"$'\n'"##END##"
 
   call_api "$system" "$user" > "$ARTIFACT_DIR/06-scripts/_all.md"
   log "  ✓ Generated: $ARTIFACT_DIR/06-scripts/_all.md"
@@ -187,6 +199,7 @@ main() {
   step_generate_config
   step_generate_agents
   step_generate_skills
+  step_generate_utils
   step_generate_scripts
   step_review
   step_register

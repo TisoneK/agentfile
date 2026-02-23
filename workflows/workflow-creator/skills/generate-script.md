@@ -1,341 +1,237 @@
 # Skill: Generate Script
 
 ## Purpose
-Teach the Generator how to write complete, robust Bash and PowerShell orchestration scripts for workflows.
+Teach the Generator how to write complete, robust Bash and PowerShell orchestration scripts for workflows — including how to go beyond the boilerplate `run.sh` / `run.ps1` pair when the workflow requires it.
 
-## Instructions
+---
 
-### Script Structure (Both Languages)
+## Step 1 — Think Before You Write
+
+Before generating any script, answer these questions from the workflow design:
+
+1. **What does this workflow actually need to run?** A basic `run.sh` calling the API is a starting point, not an end point.
+2. **Are there setup steps?** (install deps, check tools exist, configure env) → generate `setup.sh`
+3. **Does the workflow watch for files or events?** → generate `watch.sh`
+4. **Can the workflow run in batch mode over many inputs?** → generate `run-batch.sh`
+5. **Does it produce output needing cleanup or archival?** → generate `cleanup.sh`
+6. **Does it integrate with git hooks?** → generate `install-hook.sh`
+7. **Does it have a long pipeline that could fail mid-way?** → support `--resume` flag or generate `resume.sh`
+
+**Rule**: The scripts you generate must fit the workflow. Do not generate irrelevant scripts. Do not skip scripts the workflow clearly needs.
+
+---
+
+## Step 2 — Script Structure (Both Languages)
 
 Every orchestration script must have these sections in order:
 1. Shebang + strict mode
-2. Configuration variables
-3. Helper functions
-4. Step functions (one per workflow step)
-5. Main execution block
+2. Path resolution (SCRIPT_DIR, WORKFLOW_DIR, PROJECT_ROOT, SHARED_DIR, OUTPUTS_DIR)
+3. Environment variable validation
+4. Configuration variables (MODEL, etc.)
+5. Helper functions (call_api, load_file, human_gate, log)
+6. Step functions — one per workflow step
+7. Main execution block
 
-### Bash Template
+---
+
+## Step 3 — Bash Template
+
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ── Configuration ──────────────────────────────────────────────────────────────
-WORKFLOW_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SHARED_DIR="$WORKFLOW_DIR/../../../shared"
+# ── Path Resolution ─────────────────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKFLOW_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$WORKFLOW_DIR/../.." && pwd)"
+SHARED_DIR="$PROJECT_ROOT/shared"
 OUTPUTS_DIR="$WORKFLOW_DIR/outputs"
-API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is not set}"
+
+# ── Environment & Config ────────────────────────────────────────────────────────
+: "${ANTHROPIC_API_KEY:?Error: ANTHROPIC_API_KEY is not set}"
+API_KEY="$ANTHROPIC_API_KEY"
 MODEL="claude-sonnet-4-6"
 mkdir -p "$OUTPUTS_DIR"
 
 # ── Helper Functions ────────────────────────────────────────────────────────────
 call_api() {
-  local system_prompt="$1"
-  local user_prompt="$2"
-  local max_tokens="${3:-4096}"
-  local temperature="${4:-0.3}"
-
+  local system_prompt="$1" user_prompt="$2"
+  local max_tokens="${3:-4096}" temperature="${4:-0.3}"
   curl -s https://api.anthropic.com/v1/messages \
     -H "x-api-key: $API_KEY" \
     -H "anthropic-version: 2023-06-01" \
     -H "content-type: application/json" \
     -d "$(jq -n \
-      --arg model "$MODEL" \
-      --arg system "$system_prompt" \
-      --arg user "$user_prompt" \
-      --argjson max_tokens "$max_tokens" \
+      --arg model   "$MODEL" \
+      --arg system  "$system_prompt" \
+      --arg user    "$user_prompt" \
+      --argjson max_tokens  "$max_tokens" \
       --argjson temperature "$temperature" \
-      '{
-        model: $model,
-        max_tokens: $max_tokens,
-        temperature: $temperature,
-        system: $system,
-        messages: [{ role: "user", content: $user }]
-      }')" | jq -r '.content[0].text'
+      '{model:$model,max_tokens:$max_tokens,temperature:$temperature,
+        system:$system,messages:[{role:"user",content:$user}]}')" \
+  | jq -r '.content[0].text'
 }
 
-load_file() {
-  cat "$1"
-}
+load_file() { cat "$1"; }
 
 human_gate() {
-  local step_name="$1"
-  local output_file="$2"
+  local step_name="$1" output_file="$2"
   echo ""
-  echo "══════════════════════════════════════════"
-  echo "  GATE: $step_name"
-  echo "  Output: $output_file"
-  echo "══════════════════════════════════════════"
+  echo "══════════════════════════════════════════════════════"
+  echo "  ⏸  GATE: $step_name"
+  echo "  📄 Output: $output_file"
+  echo "══════════════════════════════════════════════════════"
   cat "$output_file"
   echo ""
-  read -rp "Approve and continue? [y/N] " confirm
-  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-    echo "Aborted at gate: $step_name"
-    exit 1
-  fi
+  read -rp "  Approve and continue? [y/N] " confirm
+  [[ "$confirm" == "y" || "$confirm" == "Y" ]] || { log "Aborted at gate: $step_name"; exit 1; }
 }
 
-log() {
-  echo "[$(date '+%H:%M:%S')] $*"
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# ── Steps ────────────────────────────────────────────────────────────────────────
+step_[NAME]() {
+  log "▶ Step N/M: [Step name from workflow.yaml]"
+  local system user
+  system="$(load_file "$SHARED_DIR/project.md")"$'\n\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n\n'"$(load_file "$WORKFLOW_DIR/agents/[agent].md")"
+  user="$(load_file "$WORKFLOW_DIR/skills/[skill].md")"$'\n\n'"[step-specific input here]"
+  call_api "$system" "$user" > "$OUTPUTS_DIR/[artifact-name]"
+  log "  ✓ Saved: $OUTPUTS_DIR/[artifact-name]"
 }
 
-# ── Steps ───────────────────────────────────────────────────────────────────────
-step_clarify() {
-  log "Step: clarify"
-  local system
-  system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/analyst.md")"
-  local user
-  user="$(load_file "$WORKFLOW_DIR/skills/ask-clarifying.md")"$'\n\n'"Request: $WORKFLOW_REQUEST"
-
-  call_api "$system" "$user" > "$OUTPUTS_DIR/01-clarification.md"
-  human_gate "Clarify Request" "$OUTPUTS_DIR/01-clarification.md"
-}
-
-step_design() {
-  log "Step: design"
-  local system
-  system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/architect.md")"
-  local user
-  user="$(load_file "$WORKFLOW_DIR/skills/design-workflow.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/01-clarification.md")"
-
-  call_api "$system" "$user" > "$OUTPUTS_DIR/02-design.md"
-  human_gate "Design Workflow" "$OUTPUTS_DIR/02-design.md"
-}
-
-step_generate_config() {
-  log "Step: generate-config"
-  local system
-  system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
-  local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-yaml.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate only the workflow.yaml file.'
-
-  call_api "$system" "$user" > "$OUTPUTS_DIR/03-workflow.yaml"
-  log "Generated: $OUTPUTS_DIR/03-workflow.yaml"
-}
-
-step_generate_agents() {
-  log "Step: generate-agents"
-  local system
-  system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
-  local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-agent.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate all agent .md files. Delimit each with ##FILE: === markers.'
-
-  mkdir -p "$OUTPUTS_DIR/04-agents"
-  call_api "$system" "$user" > "$OUTPUTS_DIR/04-agents/_all.md"
-  log "Generated: $OUTPUTS_DIR/04-agents/_all.md"
-}
-
-step_generate_skills() {
-  log "Step: generate-skills"
-  local system
-  system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
-  local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-skill.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate all skill .md files. Delimit each with ##FILE: === markers.'
-
-  mkdir -p "$OUTPUTS_DIR/05-skills"
-  call_api "$system" "$user" > "$OUTPUTS_DIR/05-skills/_all.md"
-  log "Generated: $OUTPUTS_DIR/05-skills/_all.md"
-}
-
-step_generate_scripts() {
-  log "Step: generate-scripts"
-  local system
-  system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/generator.md")"
-  local user
-  user="$(load_file "$WORKFLOW_DIR/skills/generate-script.md")"$'\n\n'"$(load_file "$OUTPUTS_DIR/02-design.md")"$'\n\nGenerate run.sh and run.ps1. Delimit each with ##FILE: === markers.'
-
-  mkdir -p "$OUTPUTS_DIR/06-scripts"
-  call_api "$system" "$user" > "$OUTPUTS_DIR/06-scripts/_all.md"
-  log "Generated: $OUTPUTS_DIR/06-scripts/_all.md"
-}
-
-step_review() {
-  log "Step: review"
-  local system
-  system="$(load_file "$SHARED_DIR/project.md")"$'\n'"$(load_file "$SHARED_DIR/AGENTS.md")"$'\n'"$(load_file "$WORKFLOW_DIR/agents/reviewer.md")"
-  local user
-  user="$(load_file "$WORKFLOW_DIR/skills/review-workflow.md")"$'\n\n'
-  user+="Design:\n$(load_file "$OUTPUTS_DIR/02-design.md")\n\n"
-  user+="workflow.yaml:\n$(load_file "$OUTPUTS_DIR/03-workflow.yaml")\n\n"
-  user+="Agents:\n$(load_file "$OUTPUTS_DIR/04-agents/_all.md")\n\n"
-  user+="Skills:\n$(load_file "$OUTPUTS_DIR/05-skills/_all.md")\n\n"
-  user+="Scripts:\n$(load_file "$OUTPUTS_DIR/06-scripts/_all.md")"
-
-  call_api "$system" "$user" 1024 0 > "$OUTPUTS_DIR/07-review.md"
-  human_gate "Review" "$OUTPUTS_DIR/07-review.md"
-}
-
-step_register() {
-  log "Step: register"
-  bash "$WORKFLOW_DIR/scripts/register.sh"
-}
-
-# ── Main ────────────────────────────────────────────────────────────────────────
+# ── Main ─────────────────────────────────────────────────────────────────────────
 main() {
-  : "${WORKFLOW_REQUEST:?WORKFLOW_REQUEST env var is required}"
-  log "Starting workflow-creator"
-  log "Request: $WORKFLOW_REQUEST"
+  local input="${1:?Usage: $(basename "$0") \"<input>\"}"
+  log "🚀 Starting [workflow-name]"
+  log "   Input: $input"
 
-  step_clarify
-  step_design
-  step_generate_config
-  step_generate_agents
-  step_generate_skills
-  step_generate_scripts
-  step_review
-  step_register
+  step_[NAME]
+  # ... remaining steps ...
 
-  log "Done. New workflow registered."
+  log "✅ Complete. Outputs in: $OUTPUTS_DIR"
 }
-
 main "$@"
 ```
 
-### PowerShell Template
+---
+
+## Step 4 — PowerShell Template
+
 ```powershell
 #!/usr/bin/env pwsh
 $ErrorActionPreference = "Stop"
 
-# ── Configuration ──────────────────────────────────────────────────────────────
-$WorkflowDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$SharedDir   = Join-Path $WorkflowDir "../../../shared"
+# ── Path Resolution ─────────────────────────────────────────────────────────────
+$ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
+$WorkflowDir = Split-Path -Parent (Split-Path -Parent $ScriptDir)
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $WorkflowDir)
+$SharedDir   = Join-Path $ProjectRoot "shared"
 $OutputsDir  = Join-Path $WorkflowDir "outputs"
-$ApiKey      = $env:ANTHROPIC_API_KEY ?? $(throw "ANTHROPIC_API_KEY is not set")
-$Model       = "claude-sonnet-4-6"
+
+# ── Environment & Config ────────────────────────────────────────────────────────
+param([Parameter(Mandatory=$true)][string]$Input)
+$ApiKey = $env:ANTHROPIC_API_KEY ?? $(throw "ANTHROPIC_API_KEY is not set")
+$Model  = "claude-sonnet-4-6"
 New-Item -ItemType Directory -Force -Path $OutputsDir | Out-Null
 
 # ── Helper Functions ────────────────────────────────────────────────────────────
 function Invoke-Api {
-  param(
-    [string]$SystemPrompt,
-    [string]$UserPrompt,
-    [int]$MaxTokens = 4096,
-    [float]$Temperature = 0.3
-  )
+  param([string]$System, [string]$User, [int]$MaxTokens=4096, [float]$Temp=0.3)
   $body = @{
-    model       = $Model
-    max_tokens  = $MaxTokens
-    temperature = $Temperature
-    system      = $SystemPrompt
-    messages    = @(@{ role = "user"; content = $UserPrompt })
+    model=$Model; max_tokens=$MaxTokens; temperature=$Temp
+    system=$System; messages=@(@{role="user";content=$User})
   } | ConvertTo-Json -Depth 10
-
-  $response = Invoke-RestMethod `
-    -Uri "https://api.anthropic.com/v1/messages" `
-    -Method POST `
-    -Headers @{
-      "x-api-key"         = $ApiKey
-      "anthropic-version" = "2023-06-01"
-      "content-type"      = "application/json"
-    } `
+  $r = Invoke-RestMethod `
+    -Uri "https://api.anthropic.com/v1/messages" -Method POST `
+    -Headers @{"x-api-key"=$ApiKey;"anthropic-version"="2023-06-01";"content-type"="application/json"} `
     -Body $body
-  return $response.content[0].text
+  return $r.content[0].text
 }
 
-function Get-FileContent { param([string]$Path) Get-Content $Path -Raw }
-
-function Invoke-HumanGate {
-  param([string]$StepName, [string]$OutputFile)
+function Get-FC([string]$Path)                      { Get-Content $Path -Raw }
+function Write-Log([string]$m)                      { Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $m" }
+function Invoke-Gate([string]$Name, [string]$File) {
   Write-Host "`n══════════════════════════════════════════"
-  Write-Host "  GATE: $StepName"
-  Write-Host "  Output: $OutputFile"
-  Write-Host "══════════════════════════════════════════"
-  Get-Content $OutputFile | Write-Host
-  $confirm = Read-Host "`nApprove and continue? [y/N]"
-  if ($confirm -ne "y") {
-    Write-Host "Aborted at gate: $StepName"
-    exit 1
-  }
+  Write-Host "  GATE: $Name  |  File: $File"
+  Get-Content $File | Write-Host
+  $c = Read-Host "Approve? [y/N]"
+  if ($c -ne "y") { throw "Aborted at gate: $Name" }
 }
 
-function Write-Log { param([string]$Message) Write-Host "[$(Get-Date -Format 'HH:mm:ss')] $Message" }
-
-# ── Steps ───────────────────────────────────────────────────────────────────────
-function Step-Clarify {
-  Write-Log "Step: clarify"
-  $system = (Get-FileContent "$SharedDir/project.md") + "`n" + (Get-FileContent "$SharedDir/AGENTS.md") + "`n" + (Get-FileContent "$WorkflowDir/agents/analyst.md")
-  $user   = (Get-FileContent "$WorkflowDir/skills/ask-clarifying.md") + "`n`nRequest: $env:WORKFLOW_REQUEST"
-  Invoke-Api $system $user | Set-Content "$OutputsDir/01-clarification.md"
-  Invoke-HumanGate "Clarify Request" "$OutputsDir/01-clarification.md"
+# ── Steps ────────────────────────────────────────────────────────────────────────
+function Step-[Name] {
+  Write-Log "▶ Step N/M: [Step name from workflow.yaml]"
+  $sys = (Get-FC "$SharedDir/project.md") + "`n`n" + (Get-FC "$SharedDir/AGENTS.md") + "`n`n" + (Get-FC "$WorkflowDir/agents/[agent].md")
+  $usr = (Get-FC "$WorkflowDir/skills/[skill].md") + "`n`n[step-specific input]"
+  Invoke-Api $sys $usr | Set-Content "$OutputsDir/[artifact-name]"
+  Write-Log "  ✓ Saved: $OutputsDir/[artifact-name]"
 }
 
-function Step-Design {
-  Write-Log "Step: design"
-  $system = (Get-FileContent "$SharedDir/project.md") + "`n" + (Get-FileContent "$SharedDir/AGENTS.md") + "`n" + (Get-FileContent "$WorkflowDir/agents/architect.md")
-  $user   = (Get-FileContent "$WorkflowDir/skills/design-workflow.md") + "`n`n" + (Get-FileContent "$OutputsDir/01-clarification.md")
-  Invoke-Api $system $user | Set-Content "$OutputsDir/02-design.md"
-  Invoke-HumanGate "Design Workflow" "$OutputsDir/02-design.md"
-}
-
-function Step-GenerateConfig {
-  Write-Log "Step: generate-config"
-  $system = (Get-FileContent "$SharedDir/project.md") + "`n" + (Get-FileContent "$SharedDir/AGENTS.md") + "`n" + (Get-FileContent "$WorkflowDir/agents/generator.md")
-  $user   = (Get-FileContent "$WorkflowDir/skills/generate-yaml.md") + "`n`n" + (Get-FileContent "$OutputsDir/02-design.md") + "`n`nGenerate only the workflow.yaml file."
-  Invoke-Api $system $user | Set-Content "$OutputsDir/03-workflow.yaml"
-}
-
-function Step-GenerateAgents {
-  Write-Log "Step: generate-agents"
-  New-Item -ItemType Directory -Force -Path "$OutputsDir/04-agents" | Out-Null
-  $system = (Get-FileContent "$SharedDir/project.md") + "`n" + (Get-FileContent "$SharedDir/AGENTS.md") + "`n" + (Get-FileContent "$WorkflowDir/agents/generator.md")
-  $user   = (Get-FileContent "$WorkflowDir/skills/generate-agent.md") + "`n`n" + (Get-FileContent "$OutputsDir/02-design.md") + "`n`nGenerate all agent .md files."
-  Invoke-Api $system $user | Set-Content "$OutputsDir/04-agents/_all.md"
-}
-
-function Step-GenerateSkills {
-  Write-Log "Step: generate-skills"
-  New-Item -ItemType Directory -Force -Path "$OutputsDir/05-skills" | Out-Null
-  $system = (Get-FileContent "$SharedDir/project.md") + "`n" + (Get-FileContent "$SharedDir/AGENTS.md") + "`n" + (Get-FileContent "$WorkflowDir/agents/generator.md")
-  $user   = (Get-FileContent "$WorkflowDir/skills/generate-skill.md") + "`n`n" + (Get-FileContent "$OutputsDir/02-design.md") + "`n`nGenerate all skill .md files."
-  Invoke-Api $system $user | Set-Content "$OutputsDir/05-skills/_all.md"
-}
-
-function Step-GenerateScripts {
-  Write-Log "Step: generate-scripts"
-  New-Item -ItemType Directory -Force -Path "$OutputsDir/06-scripts" | Out-Null
-  $system = (Get-FileContent "$SharedDir/project.md") + "`n" + (Get-FileContent "$SharedDir/AGENTS.md") + "`n" + (Get-FileContent "$WorkflowDir/agents/generator.md")
-  $user   = (Get-FileContent "$WorkflowDir/skills/generate-script.md") + "`n`n" + (Get-FileContent "$OutputsDir/02-design.md") + "`n`nGenerate run.sh and run.ps1."
-  Invoke-Api $system $user | Set-Content "$OutputsDir/06-scripts/_all.md"
-}
-
-function Step-Review {
-  Write-Log "Step: review"
-  $system = (Get-FileContent "$SharedDir/project.md") + "`n" + (Get-FileContent "$SharedDir/AGENTS.md") + "`n" + (Get-FileContent "$WorkflowDir/agents/reviewer.md")
-  $user   = (Get-FileContent "$WorkflowDir/skills/review-workflow.md") + "`n`n" +
-            "Design:`n" + (Get-FileContent "$OutputsDir/02-design.md") + "`n`n" +
-            "workflow.yaml:`n" + (Get-FileContent "$OutputsDir/03-workflow.yaml") + "`n`n" +
-            "Agents:`n" + (Get-FileContent "$OutputsDir/04-agents/_all.md") + "`n`n" +
-            "Skills:`n" + (Get-FileContent "$OutputsDir/05-skills/_all.md") + "`n`n" +
-            "Scripts:`n" + (Get-FileContent "$OutputsDir/06-scripts/_all.md")
-  Invoke-Api $system $user 1024 0 | Set-Content "$OutputsDir/07-review.md"
-  Invoke-HumanGate "Review" "$OutputsDir/07-review.md"
-}
-
-function Step-Register {
-  Write-Log "Step: register"
-  & "$WorkflowDir/scripts/register.ps1"
-}
-
-# ── Main ────────────────────────────────────────────────────────────────────────
-if (-not $env:WORKFLOW_REQUEST) { throw "WORKFLOW_REQUEST env var is required" }
-Write-Log "Starting workflow-creator"
-Write-Log "Request: $env:WORKFLOW_REQUEST"
-
-Step-Clarify
-Step-Design
-Step-GenerateConfig
-Step-GenerateAgents
-Step-GenerateSkills
-Step-GenerateScripts
-Step-Review
-Step-Register
-
-Write-Log "Done. New workflow registered."
+# ── Main ─────────────────────────────────────────────────────────────────────────
+Write-Log "🚀 Starting [workflow-name]. Input: $Input"
+Step-[Name]
+# ... remaining steps ...
+Write-Log "✅ Complete. Outputs in: $OutputsDir"
 ```
 
-### Key Patterns to Always Follow
-- Always validate required env vars at the top
-- Always use `set -euo pipefail` (Bash) or `$ErrorActionPreference = "Stop"` (PS)
-- Always use `log` / `Write-Log` for progress messages
-- Always load system prompt from: `project.md` + `AGENTS.md` + agent file
-- Always load skill into user prompt
-- Human gates must show the output content before asking for approval
+---
+
+## Step 5 — Additional Script Patterns
+
+### Watch Script (`watch.sh`)
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+WATCH_DIR="${1:?Usage: $0 <directory-to-watch>}"
+log() { echo "[$(date '+%H:%M:%S')] $*"; }
+log "👁  Watching: $WATCH_DIR"
+while inotifywait -q -e close_write,moved_to "$WATCH_DIR"; do
+  for f in "$WATCH_DIR"/*; do
+    [[ -f "$f" ]] || continue
+    log "Processing: $f"
+    bash "$(dirname "$0")/run.sh" "$f" && mv "$f" "$WATCH_DIR/processed/"
+  done
+done
+```
+
+### Batch Script (`run-batch.sh`)
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+INPUT_DIR="${1:?Usage: $0 <input-dir>}"
+SUCCESS=0; FAIL=0
+for f in "$INPUT_DIR"/*; do
+  [[ -f "$f" ]] || continue
+  if bash "$(dirname "$0")/run.sh" "$f"; then
+    ((SUCCESS++))
+  else
+    echo "FAILED: $f"; ((FAIL++))
+  fi
+done
+echo "Done: $SUCCESS success, $FAIL failed"
+```
+
+### Setup Script (`setup.sh`)
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+# Verify required tools
+for tool in curl jq; do
+  command -v "$tool" &>/dev/null || { echo "Missing: $tool"; exit 1; }
+done
+echo "✅ All dependencies present"
+```
+
+---
+
+## Step 6 — Key Patterns to Always Follow
+
+- Validate required env vars at startup (fail fast with clear error messages)
+- Use `set -euo pipefail` (Bash) or `$ErrorActionPreference = "Stop"` (PS)
+- Always resolve paths relative to `$SCRIPT_DIR` — never assume CWD
+- Load system prompt from: `project.md` + `AGENTS.md` + agent file
+- Load skill into user prompt before the task instruction
+- Human gates must display file contents before prompting for approval
+- Progress messages use `log` / `Write-Log` — never raw `echo` without timestamp
+- Every step function corresponds 1:1 to a step in workflow.yaml
+- PowerShell script is functionally equivalent to the Bash script — not a stub

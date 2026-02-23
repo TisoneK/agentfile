@@ -28,12 +28,32 @@ Teach the Reviewer how to systematically validate a complete workflow package fo
 - Is the skill focused on one capability?
 
 ### Step 4 — Validate scripts
-- Does run.sh start with `#!/usr/bin/env bash` and `set -euo pipefail`?
-- Does run.ps1 start with `#!/usr/bin/env pwsh` and `$ErrorActionPreference = "Stop"`?
-- Does the script load `project.md` + `AGENTS.md` + agent file into system prompt?
-- Does every step in workflow.yaml have a corresponding function in the script?
+
+**utils/ scripts**
+- Does every non-LLM operation in the workflow have a dedicated utility script? (BLOCKING if missing)
+- Does each utility script have both `.sh` and `.ps1` versions?
+- Do utility scripts accept inputs as arguments — no hardcoded paths?
+- Do utility scripts exit with code 1 and a clear message on failure?
+
+**CLI scripts (scripts/cli/)**
+- Does `run.sh` start with `#!/usr/bin/env bash` and `set -euo pipefail`?
+- Does `run.ps1` start with `#!/usr/bin/env pwsh` and `$ErrorActionPreference = "Stop"`?
+- Is `run.ps1` as fully implemented as `run.sh`? (a skeleton `run.ps1` is a **BLOCKING** defect)
+- Do `run.sh` and `run.ps1` call into `utils/` scripts instead of inlining non-LLM logic? (BLOCKING if not)
+- Does the script load `project.md` + `AGENTS.md` + agent file into the system prompt?
+- Does every step in workflow.yaml have a corresponding function in both scripts?
 - Does the script validate required env vars?
 - Are human gates implemented for all steps with `gate: human-approval`?
+
+**IDE scripts (scripts/ide/)**
+- Is `scripts/ide/instructions.md` present and complete?
+- Is `scripts/ide/steps.md` present with one section per workflow step?
+- Does `steps.md` reference any `utils/` scripts the user needs to run manually?
+- Do `register.sh` and `register.ps1` call `utils/` scripts for file assembly?
+- Do IDE scripts contain **zero** API calls or API key references? (BLOCKING if they do)
+
+**README**
+- Does `scripts/README.md` list and describe every script across all three directories (utils/, cli/, ide/)?
 
 ### Step 5 — Cross-check design vs generated files
 - Does the file manifest in the design match what was actually generated?
@@ -48,3 +68,9 @@ Teach the Reviewer how to systematically validate a complete workflow package fo
 ## Severity Definitions
 - **BLOCKING**: The workflow cannot function correctly without this fix
 - **WARNING**: The workflow will function but quality or maintainability is reduced
+
+### Step 7 — Validate workflow connections
+- Does the design mention upstream or downstream workflows?
+- If yes, are those connections implemented in the scripts (e.g., `TRIGGER_DOWNSTREAM` guard)?
+- If yes, is the connection documented in `README.md` and `scripts/README.md`?
+- Are trigger conditions clearly specified (what state/output causes the downstream trigger)?

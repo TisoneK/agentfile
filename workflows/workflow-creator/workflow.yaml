@@ -68,8 +68,10 @@ steps:
     input: artifacts/{workflow_name}/{run_id}/01-clarification.md
     goal: >
       Design the complete workflow structure: step list, agent roles,
-      skills needed, script logic, and file manifest. Update manifest.json
-      step status on start and completion.
+      skills needed, ALL required scripts (CLI and IDE with equal depth —
+      plus any additional scripts like setup, watch, batch, or hook installers),
+      inter-workflow connections (upstream/downstream triggers), and file manifest.
+      Update manifest.json step status on start and completion.
     produces: artifacts/{workflow_name}/{run_id}/02-design.md
     gate: human-approval
 
@@ -105,16 +107,34 @@ steps:
       Register each file in manifest.json with role "skill".
     produces: artifacts/{workflow_name}/{run_id}/05-skills/
 
-  - id: generate-scripts
-    name: Generate Scripts
+  - id: generate-utils
+    name: Generate Utility Scripts
     agent: agents/generator.md
-    skill: skills/generate-dual-scripts.md
+    skill: skills/generate-utils.md
     input: artifacts/{workflow_name}/{run_id}/02-design.md
     goal: >
-      Generate both IDE and CLI execution scripts based on the workflow design.
-      Write to artifacts/{workflow_name}/{run_id}/06-scripts/ide/ and 06-scripts/cli/.
-      Register each file with the appropriate "script_ide" or "script_cli" role
-      in manifest.json.
+      Analyse the workflow design and identify every non-LLM operation — file reads,
+      writes, validation, transformation, environment checks, etc. Generate a dedicated
+      utility script (both .sh and .ps1) for each operation. Write to
+      artifacts/{workflow_name}/{run_id}/06-scripts/utils/. These will be called by
+      both cli/ and ide/ scripts. Register each with role "script_utils" in manifest.json.
+    produces: artifacts/{workflow_name}/{run_id}/06-scripts/utils/
+
+  - id: generate-scripts
+    name: Generate CLI and IDE Scripts
+    agent: agents/generator.md
+    skill: skills/generate-dual-scripts.md
+    input:
+      - artifacts/{workflow_name}/{run_id}/02-design.md
+      - artifacts/{workflow_name}/{run_id}/06-scripts/utils/
+    goal: >
+      Generate BOTH CLI and IDE execution scripts with equal completeness. CLI scripts
+      (run.sh, run.ps1) must call into utils/ scripts for all non-LLM work — never
+      inline file I/O or transformation logic. IDE scripts (instructions.md, steps.md,
+      register.sh, register.ps1) must reference utils/ scripts where the user needs to
+      run them manually. Both paths must be fully implemented. Write to
+      artifacts/{workflow_name}/{run_id}/06-scripts/cli/ and 06-scripts/ide/.
+      Register each file with the appropriate role in manifest.json.
     produces: artifacts/{workflow_name}/{run_id}/06-scripts/
 
   - id: review
