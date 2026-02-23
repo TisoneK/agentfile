@@ -45,7 +45,7 @@ Your IDE agent loads these files and executes each step — no SDK, no framework
 ### 1. Install the CLI
 
 ```bash
-npm install -g agentfile
+npm install -g @tisonek/agentfile
 ```
 
 ### 2. Configure (optional)
