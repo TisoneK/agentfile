@@ -1,24 +1,34 @@
 name: workflow-creator
-version: 1.1.0
+version: 1.2.0
 specVersion: "1.0"
 description: >
-  A meta-workflow that takes a natural language request and generates
-  a complete workflow package including config, agents, skills, and scripts.
-  Outputs are staged in artifacts/<workflow-name>/<run-id>/ before being
-  promoted to workflows/<workflow-name>/ and archived.
+  A meta-workflow that generates complete workflow packages from natural language
+  requests. Outputs are staged in artifacts/<workflow-name>/<run-id>/ (factory)
+  before being promoted to workflows/<workflow-name>/ (shipped). Factory files
+  never appear in the final workflow. Supports resume via /agentfile:continue.
 
 execution:
   preferred: "ide"
 
 trigger:
-  type: natural-language
+  type: command
+  commands:
+    create:   "/agentfile:create <workflow-name> \"<description>\""
+    continue: "/agentfile:continue [workflow-name]"
   input_var: WORKFLOW_REQUEST
 
-# Artifact staging root. A new run-id (ISO-8601 timestamp, colons replaced
-# with hyphens) is created at execution start. All intermediate files live
-# here until the promote step moves them to their canonical location.
+# ── Path model ──────────────────────────────────────────────────────────────────
+# FACTORY  — artifacts/<workflow-name>/<run-id>/
+#   Staging area. Numbered files, _all.md bundles, manifest.json, design docs.
+#   Exists only during creation. Archived to outputs/ after promotion.
+#   Never referenced by the running workflow.
 #
-# Layout:
+# SHIPPED  — workflows/<workflow-name>/
+#   Clean final workflow. Only deliverables: workflow.yaml, agents/, skills/,
+#   scripts/utils|cli|ide/, outputs/ (empty, gitignored), workflow_status.json.
+#   No factory files. Self-contained. This is what users and scripts reference.
+#
+# Layout during creation:
 #   artifacts/<workflow-name>/<run-id>/
 #     manifest.json            <- control plane, updated at every step
 #     01-clarification.md
@@ -167,9 +177,10 @@ steps:
       - artifacts/{workflow_name}/{run_id}/06-scripts/
       - artifacts/{workflow_name}/{run_id}/07-review.md
     goal: >
-      Validate the artifact set against the manifest, assemble the canonical
-      workflow folder at workflows/{workflow_name}/, archive the artifact run
-      to outputs/{workflow_name}/{run_id}/build/, and update manifest.json
-      to status "registered". Write workflow_status.json to the registered
-      workflow directory.
+      Cross the factory→shipped boundary. Assemble ONLY final deliverables into
+      workflows/{workflow_name}/ — no manifest.json, no numbered prefixes, no
+      _all.md bundles, no design docs. Archive the artifact run to
+      outputs/{workflow_name}/{run_id}/build/. Update manifest.json in the archive
+      to status "registered". Write workflow_status.json (provenance pointer only)
+      to the registered workflow directory. Verify no factory files leaked.
     produces: workflows/{workflow_name}/

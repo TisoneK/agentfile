@@ -9,6 +9,7 @@ Teach the Reviewer how to systematically validate a complete workflow package fo
 - Is it valid YAML? (mentally parse it)
 - Does `name` exist and match the folder name?
 - Does every step have: id, name, goal, produces?
+- Do all `produces:` paths use `outputs/<artifact>` — **not** `artifacts/<workflow>/...`? (BLOCKING if any step writes to artifacts/)
 - Do all `agent:` references point to existing files in agents/?
 - Do all `skill:` references point to existing files in skills/?
 - Do all `script.bash` references point to existing files in scripts/?

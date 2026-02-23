@@ -21,6 +21,8 @@ Produce the `manifest.json` control plane file that tracks the full lifecycle of
 
 8. **On promotion**, populate the `promotion` object with `target`, `promoted_at`, and `archive_path`.
 
+9. **The manifest stays in artifacts/ — it never crosses into workflows/**. It is a factory control file and is archived to `outputs/<n>/<run-id>/build/` after promotion.
+
 ## File Roles Reference
 
 | File pattern | `role` value |
@@ -54,14 +56,15 @@ Produce the `manifest.json` control plane file that tracks the full lifecycle of
     "archival":   { "status": "pending" }
   },
   "steps": [
-    { "id": "clarify",          "name": "Clarify Request",       "status": "pending" },
-    { "id": "design",           "name": "Design Workflow",        "status": "pending" },
-    { "id": "generate-config",  "name": "Generate workflow.yaml", "status": "pending" },
-    { "id": "generate-agents",  "name": "Generate Agent Files",  "status": "pending" },
-    { "id": "generate-skills",  "name": "Generate Skill Files",  "status": "pending" },
-    { "id": "generate-scripts", "name": "Generate Scripts",      "status": "pending" },
-    { "id": "review",           "name": "Review All Outputs",    "status": "pending" },
-    { "id": "promote",          "name": "Promote to Workflow",   "status": "pending" }
+    { "id": "clarify",          "name": "Clarify Request",        "status": "pending" },
+    { "id": "design",           "name": "Design Workflow",         "status": "pending" },
+    { "id": "generate-config",  "name": "Generate workflow.yaml",  "status": "pending" },
+    { "id": "generate-agents",  "name": "Generate Agent Files",    "status": "pending" },
+    { "id": "generate-skills",  "name": "Generate Skill Files",    "status": "pending" },
+    { "id": "generate-utils",   "name": "Generate Utility Scripts","status": "pending" },
+    { "id": "generate-scripts", "name": "Generate CLI/IDE Scripts","status": "pending" },
+    { "id": "review",           "name": "Review All Outputs",      "status": "pending" },
+    { "id": "promote",          "name": "Promote to Workflow",     "status": "pending" }
   ],
   "files": [
     { "path": "manifest.json", "role": "manifest", "produced_by": "init" }
