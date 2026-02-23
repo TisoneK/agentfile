@@ -2,6 +2,10 @@
 
 **Agentfile is workflow-as-files for AI agents.**
 
+## Status
+Current stable release: v0.1.0  
+Development continues on main branch.
+
 Agentfile is an open specification for describing AI-powered workflows as plain files — agents, skills, steps, and rules — that any IDE agent (Cursor, Windsurf, GitHub Copilot, Claude Code, Cline, Roo) can read and execute.
 
 ---
