@@ -1,10 +1,11 @@
 name: workflow-creator
-version: 1.0.0
+version: 1.1.0
 specVersion: "1.0"
 description: >
   A meta-workflow that takes a natural language request and generates
   a complete workflow package including config, agents, skills, and scripts.
-  Automatically creates both IDE and CLI execution scripts based on preference.
+  Outputs are staged in artifacts/<workflow-name>/<run-id>/ before being
+  promoted to workflows/<workflow-name>/ and archived.
 
 execution:
   preferred: "ide"
@@ -13,10 +14,40 @@ trigger:
   type: natural-language
   input_var: WORKFLOW_REQUEST
 
+# Artifact staging root. A new run-id (ISO-8601 timestamp, colons replaced
+# with hyphens) is created at execution start. All intermediate files live
+# here until the promote step moves them to their canonical location.
+#
+# Layout:
+#   artifacts/<workflow-name>/<run-id>/
+#     manifest.json            <- control plane, updated at every step
+#     01-clarification.md
+#     02-design.md
+#     03-workflow.yaml
+#     04-agents/
+#     05-skills/
+#     06-scripts/
+#       ide/
+#       cli/
+#     07-review.md
+
 output:
   directory: workflows/{workflow_name}
 
 steps:
+  - id: init
+    name: Initialize Artifact Run
+    agent: agents/analyst.md
+    skill: skills/generate-manifest.md
+    input: $WORKFLOW_REQUEST
+    goal: >
+      Create the artifact run directory at artifacts/{workflow_name}/{run_id}/
+      and write the initial manifest.json with status "generating" and all
+      steps set to "pending". The run_id is the current UTC timestamp in the
+      format YYYY-MM-DDTHH-MM-SS. Output the run directory path so subsequent
+      steps can reference it.
+    produces: artifacts/{workflow_name}/{run_id}/manifest.json
+
   - id: clarify
     name: Clarify Request
     agent: agents/analyst.md
@@ -25,79 +56,100 @@ steps:
     goal: >
       Extract and clarify the workflow's purpose, inputs, outputs, steps,
       agents needed, edge cases, and any ambiguities. Ask the user questions
-      if anything is unclear.
-    produces: outputs/01-clarification.md
+      if anything is unclear. Update manifest.json: set clarify step to
+      in_progress, then completed on finish.
+    produces: artifacts/{workflow_name}/{run_id}/01-clarification.md
     gate: human-approval
 
   - id: design
     name: Design Workflow
     agent: agents/architect.md
     skill: skills/design-workflow.md
-    input: outputs/01-clarification.md
+    input: artifacts/{workflow_name}/{run_id}/01-clarification.md
     goal: >
       Design the complete workflow structure: step list, agent roles,
-      skills needed, script logic, and file manifest.
-    produces: outputs/02-design.md
+      skills needed, script logic, and file manifest. Update manifest.json
+      step status on start and completion.
+    produces: artifacts/{workflow_name}/{run_id}/02-design.md
     gate: human-approval
 
   - id: generate-config
     name: Generate workflow.yaml
     agent: agents/generator.md
     skill: skills/generate-yaml.md
-    input: outputs/02-design.md
-    goal: Generate the workflow.yaml config file for the new workflow.
-    produces: outputs/03-workflow.yaml
+    input: artifacts/{workflow_name}/{run_id}/02-design.md
+    goal: >
+      Generate the workflow.yaml config file for the new workflow.
+      Register the file in manifest.json files[] with role "workflow_config".
+    produces: artifacts/{workflow_name}/{run_id}/03-workflow.yaml
 
   - id: generate-agents
     name: Generate Agent Files
     agent: agents/generator.md
     skill: skills/generate-agent.md
-    input: outputs/02-design.md
-    goal: Generate all agent .md files defined in the design.
-    produces: outputs/04-agents/
+    input: artifacts/{workflow_name}/{run_id}/02-design.md
+    goal: >
+      Generate all agent .md files defined in the design.
+      Write them to artifacts/{workflow_name}/{run_id}/04-agents/.
+      Register each file in manifest.json with role "agent".
+    produces: artifacts/{workflow_name}/{run_id}/04-agents/
 
   - id: generate-skills
     name: Generate Skill Files
     agent: agents/generator.md
     skill: skills/generate-skill.md
-    input: outputs/02-design.md
-    goal: Generate all skill .md files defined in the design.
-    produces: outputs/05-skills/
+    input: artifacts/{workflow_name}/{run_id}/02-design.md
+    goal: >
+      Generate all skill .md files defined in the design.
+      Write them to artifacts/{workflow_name}/{run_id}/05-skills/.
+      Register each file in manifest.json with role "skill".
+    produces: artifacts/{workflow_name}/{run_id}/05-skills/
 
   - id: generate-scripts
     name: Generate Scripts
     agent: agents/generator.md
     skill: skills/generate-dual-scripts.md
-    input: outputs/02-design.md
+    input: artifacts/{workflow_name}/{run_id}/02-design.md
     goal: >
       Generate both IDE and CLI execution scripts based on the workflow design.
-      Create scripts/ide/ for IDE agent instructions and scripts/cli/ for runtime scripts.
-      Detect execution preference from workflow design and generate appropriate scripts.
-    produces: outputs/06-scripts/
+      Write to artifacts/{workflow_name}/{run_id}/06-scripts/ide/ and 06-scripts/cli/.
+      Register each file with the appropriate "script_ide" or "script_cli" role
+      in manifest.json.
+    produces: artifacts/{workflow_name}/{run_id}/06-scripts/
 
   - id: review
     name: Review All Outputs
     agent: agents/reviewer.md
     skill: skills/review-workflow.md
     input:
-      - outputs/02-design.md
-      - outputs/03-workflow.yaml
-      - outputs/04-agents/
-      - outputs/05-skills/
-      - outputs/06-scripts/
+      - artifacts/{workflow_name}/{run_id}/02-design.md
+      - artifacts/{workflow_name}/{run_id}/03-workflow.yaml
+      - artifacts/{workflow_name}/{run_id}/04-agents/
+      - artifacts/{workflow_name}/{run_id}/05-skills/
+      - artifacts/{workflow_name}/{run_id}/06-scripts/
     goal: >
       Review all generated files for consistency, completeness, and correctness.
-      Produce a review report. Flag any issues.
-    produces: outputs/07-review.md
+      Produce a review report. Flag any issues. Update manifest.json:
+      set phases.generation.status to "completed" and phases.validation.status
+      to "completed" if review passes. Set status to "validated".
+    produces: artifacts/{workflow_name}/{run_id}/07-review.md
     gate: human-approval
 
-  - id: register
-    name: Register Workflow
-    action: shell
-    script:
-      bash: scripts/ide/register.sh
-      pwsh: scripts/ide/register.ps1
+  - id: promote
+    name: Promote to Workflow
+    agent: agents/generator.md
+    skill: skills/promote-workflow.md
+    input:
+      - artifacts/{workflow_name}/{run_id}/manifest.json
+      - artifacts/{workflow_name}/{run_id}/03-workflow.yaml
+      - artifacts/{workflow_name}/{run_id}/04-agents/
+      - artifacts/{workflow_name}/{run_id}/05-skills/
+      - artifacts/{workflow_name}/{run_id}/06-scripts/
+      - artifacts/{workflow_name}/{run_id}/07-review.md
     goal: >
-      Move all approved generated files into the correct workflow folder
-      under workflows/{workflow_name}/. Uses IDE-safe scripts that require
-      no API key — pure file assembly only.
+      Validate the artifact set against the manifest, assemble the canonical
+      workflow folder at workflows/{workflow_name}/, archive the artifact run
+      to outputs/{workflow_name}/{run_id}/build/, and update manifest.json
+      to status "registered". Write workflow_status.json to the registered
+      workflow directory.
+    produces: workflows/{workflow_name}/

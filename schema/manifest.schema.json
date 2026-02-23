@@ -1,0 +1,206 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agentfile.dev/schema/manifest.schema.json",
+  "title": "Agentfile Artifact Manifest",
+  "description": "Control plane metadata for a workflow generation run. Written at the start of generation and updated at each phase transition.",
+  "type": "object",
+  "required": ["specVersion", "workflow", "run_id", "created_at", "execution_mode", "generator", "status", "phases", "files"],
+  "properties": {
+    "specVersion": {
+      "type": "string",
+      "description": "Agentfile spec version used during generation.",
+      "example": "1.0"
+    },
+    "workflow": {
+      "type": "string",
+      "description": "Workflow name being generated. Lowercase, hyphenated.",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "example": "dir-structure"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Unique run identifier. ISO-8601 timestamp, colons replaced with hyphens for filesystem safety.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}$",
+      "example": "2026-02-23T10-41-22"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp when generation began.",
+      "example": "2026-02-23T10:41:22Z"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp of last manifest update."
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": ["ide", "cli"],
+      "description": "Execution environment in which this run was triggered."
+    },
+    "generator": {
+      "type": "string",
+      "description": "Name of the workflow that created this artifact.",
+      "example": "workflow-creator"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["generating", "generated", "validating", "validated", "promoting", "registered", "archived", "failed"],
+      "description": "Overall lifecycle status of this artifact set."
+    },
+    "phases": {
+      "type": "object",
+      "description": "Per-phase status tracking. Each phase maps to a group of steps.",
+      "properties": {
+        "generation": {
+          "$ref": "#/definitions/phase"
+        },
+        "validation": {
+          "$ref": "#/definitions/phase"
+        },
+        "promotion": {
+          "$ref": "#/definitions/phase"
+        },
+        "archival": {
+          "$ref": "#/definitions/phase"
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "description": "Per-step execution record. Mirrors workflow.yaml step ids.",
+      "items": {
+        "$ref": "#/definitions/step_record"
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "Registry of all artifacts produced during generation.",
+      "items": {
+        "$ref": "#/definitions/file_record"
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "description": "Populated when the artifact is promoted to a canonical workflow.",
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "Path where the workflow was registered.",
+          "example": "workflows/dir-structure"
+        },
+        "promoted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "archive_path": {
+          "type": "string",
+          "description": "Path where the artifact folder was archived post-promotion.",
+          "example": "outputs/dir-structure/2026-02-23T10-41-22/build"
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "Accumulated error log across all phases.",
+      "items": {
+        "type": "object",
+        "required": ["at", "phase", "message"],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "step_id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "phase": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "completed", "failed", "skipped"]
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "step_record": {
+      "type": "object",
+      "required": ["id", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Step id from workflow.yaml."
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "completed", "failed", "skipped", "awaiting_approval"]
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "artifact": {
+          "type": "string",
+          "description": "Relative path of the artifact this step produced."
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message if this step failed."
+        }
+      }
+    },
+    "file_record": {
+      "type": "object",
+      "required": ["path", "role"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path relative to the artifact run directory."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["clarification", "design", "workflow_config", "agent", "skill", "script_ide", "script_cli", "review", "manifest"],
+          "description": "Semantic role of this file in the generation pipeline."
+        },
+        "produced_by": {
+          "type": "string",
+          "description": "Step id that produced this file."
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "checksum": {
+          "type": "string",
+          "description": "SHA-256 of file contents, for archival integrity."
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,12 @@
 # Agentfile runtime artifacts
 outputs/
 
+# Agentfile artifact staging (generation workspace)
+# Subdirectories are transient build folders — keep the root for structure
+artifacts/**/
+# Exception: keep .gitkeep placeholders if present
+!artifacts/**/.gitkeep
+
 # Environment files
 .env
 .env.local

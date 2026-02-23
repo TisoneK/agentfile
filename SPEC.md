@@ -18,21 +18,41 @@ Any IDE agent, automation tool, or runtime that can read files can execute an Ag
 A conforming Agentfile workflow directory MUST contain:
 
 ```
-<workflow-name>/
-  workflow.yaml          # Required. Workflow configuration.
-  agents/                # Required. One or more agent definition files.
-    <role>.md
-  skills/                # Optional. Reusable skill instruction files.
-    <skill-name>.md
-  scripts/               # Optional. Execution scripts for different modes.
-    ide/                  # IDE agent instructions and prompts.
-      instructions.md     # Step-by-step IDE execution guide.
-      steps.md           # IDE-specific step instructions.
-    cli/                  # CLI runtime scripts.
-      run.sh             # Unix/Linux execution script.
-      run.ps1            # Windows PowerShell script.
-    README.md              # Execution mode documentation.
-  outputs/               # Optional. Runtime artifacts. Should be gitignored.
+<project-root>/
+  agentfile.yaml                  # Optional. Project manifest.
+  artifacts/                      # Generation staging workspace.
+    <workflow-name>/
+      <run-id>/                   # e.g. 2026-02-23T10-41-22
+        manifest.json             # Control plane for this run.
+        01-clarification.md
+        02-design.md
+        03-workflow.yaml
+        04-agents/
+        05-skills/
+        06-scripts/
+        07-review.md
+  workflows/
+    <workflow-name>/              # Canonical, version-controlled workflow.
+      workflow.yaml               # Required. Workflow configuration.
+      workflow_status.json        # Optional. Pointer to originating build.
+      agents/                     # Required. One or more agent definition files.
+        <role>.md
+      skills/                     # Optional. Reusable skill instruction files.
+        <skill-name>.md
+      scripts/                    # Optional. Execution scripts.
+        ide/
+          instructions.md
+          steps.md
+        cli/
+          run.sh
+          run.ps1
+        README.md
+      outputs/                    # Runtime artifacts. Should be gitignored.
+  outputs/
+    <workflow-name>/
+      <run-id>/
+        build/                    # Archived generation run (provenance).
+        execution/                # Runtime step artifacts.
 ```
 
 **Note:** The `scripts/` directory supports dual execution modes:
@@ -235,9 +255,136 @@ Global behavioral rules that apply to all agents in all workflows. Injected into
 
 ---
 
+## artifacts/ Directory
+
+The `artifacts/` directory is the **generation staging workspace**. When a workflow is created by the `workflow-creator` (or any generative workflow), all intermediate files are written here before being promoted to their canonical location.
+
+### Layout
+
+```
+artifacts/
+  <workflow-name>/
+    <run-id>/                    # e.g. 2026-02-23T10-41-22
+      manifest.json              # Control plane — lifecycle tracking
+      01-clarification.md
+      02-design.md
+      03-workflow.yaml
+      04-agents/
+      05-skills/
+      06-scripts/
+        ide/
+        cli/
+      07-review.md
+```
+
+The `<run-id>` is an ISO-8601 UTC timestamp with colons replaced by hyphens for filesystem safety: `YYYY-MM-DDTHH-MM-SS`. This ensures run directories are sortable, unique, and safe on all platforms.
+
+### Lifecycle
+
+```
+artifacts/<n>/<run-id>/    ← generation workspace (writable, transient)
+       ↓   (promote step)
+workflows/<n>/              ← canonical workflow (stable, version-controlled)
+       ↓   (archive)
+outputs/<n>/<run-id>/build/ ← provenance archive (read-only record)
+```
+
+### Gitignore policy
+
+`artifacts/` run subdirectories SHOULD be gitignored. The `artifacts/` root directory itself MAY be tracked to preserve its structure. A `.gitkeep` file can be committed at `artifacts/.gitkeep` to keep the directory in version control while ignoring all run content.
+
+---
+
+## manifest.json
+
+The `manifest.json` file is the **control plane** for a generation run. It lives at `artifacts/<workflow-name>/<run-id>/manifest.json` and is written at run initialization, then updated at every phase transition and step completion.
+
+### Purpose
+
+- Track the lifecycle status of each step
+- Register all files produced during generation
+- Provide a promotion audit trail
+- Enable recovery and debugging of partial runs
+
+### Schema reference
+
+See `schema/manifest.schema.json` for the full JSON Schema definition.
+
+### Key fields
+
+| Field | Description |
+|---|---|
+| `workflow` | Workflow name being generated |
+| `run_id` | Filesystem-safe timestamp (`YYYY-MM-DDTHH-MM-SS`) |
+| `status` | Overall lifecycle: `generating → generated → validated → registered → archived` |
+| `phases` | Per-phase status: `generation`, `validation`, `promotion`, `archival` |
+| `steps[]` | Per-step record mirroring `workflow.yaml` step ids |
+| `files[]` | Registry of every artifact produced, with `role` and `produced_by` |
+| `promotion` | Populated after promotion: `target`, `promoted_at`, `archive_path` |
+| `errors[]` | Append-only error log |
+
+### Step status lifecycle
+
+```
+pending → in_progress → completed
+                      → failed
+                      → awaiting_approval  (gate: human-approval)
+                      → skipped
+```
+
+### Minimal example
+
+```json
+{
+  "specVersion": "1.0",
+  "workflow": "my-workflow",
+  "run_id": "2026-02-23T10-41-22",
+  "created_at": "2026-02-23T10:41:22Z",
+  "execution_mode": "ide",
+  "generator": "workflow-creator",
+  "status": "generating",
+  "phases": {
+    "generation": { "status": "in_progress" },
+    "validation": { "status": "pending" },
+    "promotion":  { "status": "pending" },
+    "archival":   { "status": "pending" }
+  },
+  "steps": [
+    { "id": "clarify", "name": "Clarify Request", "status": "pending" }
+  ],
+  "files": [
+    { "path": "manifest.json", "role": "manifest", "produced_by": "init" }
+  ],
+  "errors": []
+}
+```
+
+---
+
+## workflow_status.json
+
+After a workflow is promoted to `workflows/<n>/`, a lightweight `workflow_status.json` is written alongside `workflow.yaml` as a pointer back to the originating run:
+
+```json
+{
+  "workflow": "my-workflow",
+  "registered_at": "2026-02-23T11:02:44Z",
+  "source_run_id": "2026-02-23T10-41-22",
+  "archive": "outputs/my-workflow/2026-02-23T10-41-22/build"
+}
+```
+
+This file is version-controlled and provides a stable audit link from the canonical workflow to its build provenance.
+
+---
+
 ## outputs/ Directory
 
-The `outputs/` directory is a runtime scratch space. It SHOULD be listed in `.gitignore`. Each step writes its artifact here using the naming convention `<step-id>-<artifact>`.
+The `outputs/` directory serves two purposes:
+
+1. **Runtime scratch space** — each workflow execution writes step artifacts here using the naming convention `<step-id>-<artifact>`. SHOULD be gitignored within each workflow folder.
+
+2. **Build archive** — after promotion, the original artifact run is archived to `outputs/<workflow-name>/<run-id>/build/`. This is a read-only record and SHOULD be gitignored at the project root.
 
 ---
 
