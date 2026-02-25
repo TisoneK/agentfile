@@ -1,0 +1,32 @@
+---
+name: safe-migration
+description: Execute migration from v0.1.0 to new clean structure with safety checks
+web_bundle: true
+createWorkflow: './steps-c/step-01-backup.md'
+---
+
+# Safe Migration Workflow
+
+**Goal:** Execute migration from v0.1.0 to new clean structure with safety checks
+
+**Description:** Performs step-by-step migration with backup creation, validation, and rollback capabilities
+
+**Primary Agent:** Sam (Migration Specialist)
+
+## Workflow Steps
+
+| Step | Name | Goal |
+|------|------|------|
+| 1 | Pre-Migration Backup | Create complete backup of existing installation |
+| 2 | Migration Preparation | Set up target .agentfile/ structure |
+| 3 | File Migration | Move files to new structure |
+| 4 | Configuration Update | Update configurations for new structure |
+| 5 | Validation | Verify migration success and functionality |
+| 6 | Cleanup | Remove old files after successful validation |
+
+## Outputs
+
+- Migration execution log
+- Backup manifest
+- Validation report
+- Rollback instructions

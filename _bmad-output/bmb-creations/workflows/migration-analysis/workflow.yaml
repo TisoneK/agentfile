@@ -1,0 +1,31 @@
+---
+name: migration-analysis
+description: Analyze existing v0.1.0 installations for migration readiness and create migration plan
+web_bundle: true
+createWorkflow: './steps-c/step-01-scan.md'
+---
+
+# Migration Analysis Workflow
+
+**Goal:** Analyze existing v0.1.0 installations for migration readiness and create migration plan
+
+**Description:** Examines current agentfile installations, identifies migration requirements, and generates detailed migration strategy
+
+**Primary Agent:** Sam (Migration Specialist)
+
+## Workflow Steps
+
+| Step | Name | Goal |
+|------|------|------|
+| 1 | Scan Installation | Detect existing agentfile files and structure |
+| 2 | Analyze Dependencies | Identify tools, workflows, and customizations |
+| 3 | Assess Migration Complexity | Evaluate migration difficulty and risks |
+| 4 | Create Migration Plan | Generate step-by-step migration strategy |
+| 5 | Backup Strategy | Design backup and rollback procedures |
+
+## Outputs
+
+- Migration analysis report
+- Migration plan document
+- Risk assessment
+- Backup strategy document

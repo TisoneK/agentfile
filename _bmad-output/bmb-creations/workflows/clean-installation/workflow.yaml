@@ -1,0 +1,31 @@
+---
+name: clean-installation
+description: Install agentfile with .agentfile/ directory structure for zero-clutter project organization
+web_bundle: true
+createWorkflow: './steps-c/step-01-init.md'
+---
+
+# Clean Installation Workflow
+
+**Goal:** Install agentfile with .agentfile/ directory structure for zero-clutter project organization
+
+**Description:** Sets up agentfile using invisible .agentfile/ directory organization that maintains project purity while providing full functionality
+
+**Primary Agent:** Alex (Setup Specialist)
+
+## Workflow Steps
+
+| Step | Name | Goal |
+|------|------|------|
+| 1 | Initialize Clean Setup | Create .agentfile/ directory structure |
+| 2 | Configure Installation | Set up module.yaml and preferences |
+| 3 | Install Core Files | Copy agentfile files to .agentfile/ directory |
+| 4 | Validate Structure | Verify clean installation follows standards |
+| 5 | Completion | Summarize installation results |
+
+## Outputs
+
+- .agentfile/ directory structure
+- Installation log
+- Configuration files
+- Status report

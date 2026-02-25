@@ -1,0 +1,30 @@
+---
+name: configuration-management
+description: Set and manage installation structure preferences and settings
+web_bundle: true
+createWorkflow: './steps-c/step-01-load.md'
+---
+
+# Configuration Management Workflow
+
+**Goal:** Set and manage installation structure preferences and settings
+
+**Description:** Provides interface for users to configure agentfile installation preferences and manage module settings
+
+**Primary Agent:** Alex (Setup Specialist)
+
+## Workflow Steps
+
+| Step | Name | Goal |
+|------|------|------|
+| 1 | Load Current Configuration | Read existing module.yaml settings |
+| 2 | Present Configuration Options | Show available preferences and settings |
+| 3 | Process User Changes | Update configuration based on user input |
+| 4 | Validate Configuration | Ensure settings are valid and compatible |
+| 5 | Apply Changes | Save updated configuration |
+
+## Outputs
+
+- Updated module.yaml
+- Configuration change log
+- Settings documentation

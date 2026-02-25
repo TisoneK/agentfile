@@ -1,0 +1,19 @@
+---
+name: migration-report
+description: Generate detailed migration documentation and reports
+web_bundle: true
+createWorkflow: './steps-c/step-01-generate.md'
+---
+
+# Migration Report Workflow
+
+**Goal:** Generate detailed migration documentation and reports
+
+**Primary Agent:** Sam (Migration Specialist)
+
+## Steps
+
+1. Generate Migration Report
+2. Document Changes
+3. Create Summary
+4. Export Documentation

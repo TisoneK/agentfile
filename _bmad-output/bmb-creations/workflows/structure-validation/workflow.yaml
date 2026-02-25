@@ -1,0 +1,20 @@
+---
+name: structure-validation
+description: Verify agentfile installation follows best practices and standards
+web_bundle: true
+createWorkflow: './steps-c/step-01-check.md'
+---
+
+# Structure Validation Workflow
+
+**Goal:** Verify agentfile installation follows best practices and standards
+
+**Primary Agent:** Both Alex and Sam
+
+## Steps
+
+1. Check Directory Structure
+2. Validate Configuration Files
+3. Verify Agent Definitions
+4. Check Workflow Integrations
+5. Generate Validation Report
