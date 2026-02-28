@@ -47,7 +47,7 @@ user prompt    =  skills/<skill>.md  +  "---"  +  <step input>
 ## Quick start
 
 ```bash
-npm install -g agentfile
+npm install -g @tisonek/agentfile
 cd my-project
 agentfile init
 ```
