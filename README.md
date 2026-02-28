@@ -1,357 +1,229 @@
 # Agentfile
 
-**Agentfile is workflow-as-files for AI agents.**
-
-## Status
-Current stable release: v0.1.0  
-Development continues on main branch.
-
-Agentfile is an open specification for describing AI-powered workflows as plain files — agents, skills, steps, and rules — that any IDE agent (Cursor, Windsurf, GitHub Copilot, Claude Code, Cline, Roo) can read and execute.
+**Treat AI Behavior as a First-Class Project Artifact**
 
 ---
 
-## Why Agentfile?
+## What is this?
 
-Most AI workflows are locked inside proprietary tools, chat UIs, or framework-specific code. Agentfile makes workflows **portable, versionable, and agent-agnostic** — define once, run anywhere.
+Agentfile lets you define AI workflows using files that live in your project. Each workflow is expressed as a folder of YAML and Markdown describing what happens, who performs it, and how execution should proceed.
 
-| Without Agentfile | With Agentfile |
-|-------------------|----------------|
-| Workflow logic lives in the tool | Workflow logic lives in your repo |
-| Tied to one AI provider | Works with any IDE agent |
-| No version control | Git-native — diff, branch, PR your workflows |
-| Hard to share or reuse | Clone, fork, compose |
+Execution is handled by your IDE agent using the workflow definition as the source of truth.
+
+```
+workflows/
+  code-reviewer/
+    workflow.yaml          ← step definitions
+    agents/
+      reviewer.md          ← LLM persona + rules for this step
+      security-scanner.md
+    skills/
+      vulnerability-detection.md   ← how to do the analysis
+      report-compilation.md
+    scripts/
+      ide/                 ← file-ops for IDE execution
+      cli/                 ← run.sh / run.ps1 for headless
+```
+
+Run it from Cursor, Windsurf, Claude Code, Cline — or from a terminal. Same files, same results.
 
 ---
 
-## How It Works
+## The mental model
 
-An Agentfile workflow is a folder of plain text files your IDE agent reads and follows:
+Each workflow step loads three things into the LLM:
 
 ```
-my-workflow/
-  workflow.yaml       # Steps, goals, and routing logic
-  agents/             # Agent personas and rules (.md files)
-  skills/             # Reusable instruction sets (.md files)
-  scripts/            # Runtime scripts for CLI execution (optional)
-  outputs/            # Artifacts produced at each step (gitignored)
+system prompt  =  shared/project.md  +  AGENTS.md  +  agents/<role>.md
+user prompt    =  skills/<skill>.md  +  "---"  +  <step input>
 ```
 
-Your IDE agent loads these files and executes each step — no SDK, no framework, no lock-in. For CLI execution, `scripts/run.sh` and `scripts/run.ps1` provide the orchestration layer.
+**Agents** define *who* the LLM is — persona, responsibilities, hard rules, exact output format.  
+**Skills** define *how* to do something — a technique, a checklist, a format.  
+**workflow.yaml** defines *what* happens — the step order, inputs, outputs, approval gates.
 
 ---
 
-## Quick Start
-
-### 1. Install the CLI
+## Quick start
 
 ```bash
-npm install -g @tisonek/agentfile
-```
-
-### 2. Configure (optional)
-
-```bash
-# Save your API key once
-agentfile config set api-key your-anthropic-api-key
-
-# Set default shell (optional - auto-detected by OS)
-agentfile config set shell pwsh  # or bash
-
-# View current configuration
-agentfile config
-```
-
-### 3. Scaffold a project
-
-```bash
-mkdir my-project && cd my-project
+npm install -g agentfile
+cd my-project
 agentfile init
-agentfile create code-reviewer
 ```
 
-### 4. Open in your IDE agent
+`agentfile init` prompts you to pick your IDE(s), then writes `.cursorrules`, `.windsurfrules`, `CLAUDE.md`, etc. — whichever your IDE reads. From that point, slash commands are live.
 
-**Slash Commands (Recommended)**
+---
+
+## Slash commands
+
+Once initialized, your IDE understands:
 
 ```
+/agentfile:create code-reviewer Review code for bugs, security issues, and style problems
 /agentfile:run code-reviewer src/auth.js
-/agentfile:create my-workflow Analyze logs and surface error patterns
 /agentfile:list
 ```
 
-**Cursor / Windsurf** — type any slash command directly in the composer.
+**`/agentfile:create`** kicks off the built-in `workflow-creator` pipeline: it clarifies your requirements, designs the workflow structure, generates all the files (agents, skills, scripts, YAML), runs a review pass, then promotes the result to `workflows/`. Every stage has a human approval gate — you sign off before anything moves forward.
 
-**Claude Code:**
+**`/agentfile:run`** loads your workflow and executes it step by step using your IDE's own LLM. No external calls. No API key. The IDE is the runtime.
 
-```bash
-claude "/agentfile:run code-reviewer src/auth.js"
-```
+**`/agentfile:list`** scans `workflows/*/workflow.yaml` and returns names and descriptions. Pure filesystem — no LLM call needed.
 
-**Cline / Roo / GitHub Copilot** — reference `workflow.yaml` in your system prompt or workspace instructions.
+---
 
-### 5. Run with CLI (optional)
+## Two execution modes
 
-```bash
-agentfile run code-reviewer --input "path/to/code.js"
-# API key automatically loaded from config
+**IDE mode** (default) — The IDE agent reads `workflow.yaml` and executes steps directly. Only `scripts/ide/` helper scripts may run (file operations only — no API calls). This is the default and works out of the box.
+
+**CLI mode** — `agentfile run` executes via `scripts/cli/run.sh` or `run.ps1`. Use this for headless environments, CI pipelines, or when you want scripted automation.
+
+Set the preference in `workflow.yaml`:
+
+```yaml
+execution:
+  preferred: "ide"   # or "cli"
 ```
 
 ---
 
-## Workflow Format
+## How a workflow is built
+
+When you run `/agentfile:create`, the `workflow-creator` pipeline stages everything in `artifacts/` before it ever touches `workflows/`:
+
+```
+artifacts/<workflow-name>/<run-id>/
+  manifest.json          ← control plane — tracks every step's status
+  01-clarification.md
+  02-design.md
+  03-workflow.yaml
+  04-agents/
+  05-skills/
+  06-scripts/
+    ide/
+    cli/
+  07-review.md
+         ↓  agentfile promote
+workflows/<workflow-name>/
+```
+
+The `manifest.json` tracks lifecycle status for each step (`pending → in_progress → completed → awaiting_approval`). Nothing lands in `workflows/` until you explicitly promote it.
+
+---
+
+## workflow.yaml
 
 ```yaml
+specVersion: "1.0"
 name: code-reviewer
 version: 1.0.0
-description: Reviews code for bugs, style, and improvements.
-
+description: Systematic code review — static analysis, security scan, style check, report.
 trigger:
   type: natural-language
   input_var: AGENT_INPUT
-
+execution:
+  preferred: "ide"
 steps:
   - id: analyze
-    name: Analyze Code
-    agent: agents/analyzer.md
-    skill: skills/code-analysis.md
+    name: Static Analysis
+    agent: agents/static-analyzer.md
+    skill: skills/code-quality-analysis.md
     input: $AGENT_INPUT
-    goal: Identify bugs, security issues, and code smells.
-    produces: outputs/01-analysis.md
+    goal: Identify code quality issues, anti-patterns, and complexity violations.
+    produces: outputs/static-analysis.md
 
-  - id: review
-    name: Write Review
-    agent: agents/reviewer.md
-    skill: skills/write-review.md
-    input: outputs/01-analysis.md
-    goal: Turn the analysis into a clear, actionable review report.
-    produces: outputs/02-review.md
+  - id: security
+    name: Security Scan
+    agent: agents/security-scanner.md
+    skill: skills/vulnerability-detection.md
+    input: outputs/static-analysis.md
+    goal: Detect security vulnerabilities and rate their severity.
+    produces: outputs/security-scan.md
     gate: human-approval
-```
 
-→ Full spec: [SPEC.md](./SPEC.md)
-→ JSON Schema: [schema/workflow.schema.json](./schema/workflow.schema.json)
+  - id: report
+    name: Compile Report
+    agent: agents/reporter.md
+    skill: skills/report-compilation.md
+    input:
+      - outputs/static-analysis.md
+      - outputs/security-scan.md
+    goal: Produce a structured, actionable review report.
+    produces: outputs/final-report.md
+```
 
 ---
 
-## CLI Commands
+## Supported IDEs
 
-| Command | Description |
-|---------|-------------|
-| `agentfile init` | Scaffold a new Agentfile project in the current directory |
-| `agentfile create <name>` | Create a new workflow |
-| `agentfile run <name>` | Run a workflow by name |
-| `agentfile list` | List all workflows in the current project |
-| `agentfile validate [name]` | Validate workflow(s) against the spec |
-| `agentfile config` | Manage configuration (API keys, default model, shell) |
-| `agentfile setup-ide <ide>` | Generate IDE integration instructions for slash commands |
+| IDE | Rules file written by `agentfile init` |
+|-----|----------------------------------------|
+| Cursor | `.cursorrules` |
+| Windsurf | `.windsurfrules` |
+| Claude Code | `CLAUDE.md` |
+| Cline / Roo | `.clinerules` |
+| GitHub Copilot | `.github/copilot-instructions.md` |
+| Kilo | `.kilocode/rules/agentfile.md` |
 
-### Configuration Management
+`AGENTS.md` at the project root is the single source of truth. IDE-specific files are one-liners that point to it.
+
+---
+
+## CLI reference
 
 ```bash
-# Show current configuration
-agentfile config
-
-# Set API key (saved for future use)
-agentfile config set api-key your-anthropic-api-key
-
-# Set default model
-agentfile config set model claude-sonnet-4-6
-
-# Set default shell (overrides OS auto-detection)
-agentfile config set shell pwsh  # or bash
-
-# Remove configuration
-agentfile config unset api-key
-```
-
-### IDE Setup
-
-```bash
-# Generate IDE-specific instructions for slash commands
-agentfile setup-ide cursor    # For Cursor
-agentfile setup-ide windsurf   # For Windsurf
-agentfile setup-ide copilot    # For GitHub Copilot
-agentfile setup-ide claude     # For Claude Code
-agentfile setup-ide cline      # For Cline
-agentfile setup-ide roo        # For Roo
+agentfile init                           # Set up a new project + configure IDEs
+agentfile create <name>                  # Create a workflow via workflow-creator
+agentfile run <name> --input <input>     # Run a workflow
+agentfile list                           # List all workflows
+agentfile validate <name>                # Validate workflow.yaml against schema
+agentfile status <name>                  # Check a run's step-by-step status
+agentfile promote <artifact-dir>         # Promote generated workflow to workflows/
+agentfile approve <run-id>               # Approve a human-gate checkpoint
+agentfile retry <run-id> <step-id>       # Retry a failed step
+agentfile config                         # View / update CLI config
 ```
 
 ---
 
-## Included Examples
-
-| Workflow | Description |
-|----------|-------------|
-| `examples/hello-world` | **Start here** — the simplest possible workflow. One agent, one skill, no config needed |
-| `examples/pr-summarizer` | Summarizes pull request diffs into structured reports |
-| `workflows/code-reviewer` | Reviews code for bugs, security issues, and improvements |
-| `workflows/slash-demo` | **Slash command demo** — perfect for testing `/agentfile:run slash-demo hello` |
-| `workflows/workflow-creator` | Meta-workflow — generates new workflows from a natural language description |
-
-Clone and point your IDE agent at `examples/hello-world` to get started in under a minute:
-
-```bash
-git clone https://github.com/TisoneK/agentfile
-```
-
-Then in your IDE agent:
+## Project structure
 
 ```
-/agentfile:run hello-world recursion
-```
-
----
-
-## IDE Agent Execution
-
-### Slash Command Format
-
-Agentfile uses a single `/agentfile:` namespace with three subcommands:
-
-```
-/agentfile:run <workflow-name> <args>
-/agentfile:create <new-workflow-name> <description>
-/agentfile:list
-```
-
-**Examples:**
-```
-/agentfile:run hello-world recursion
-/agentfile:run code-reviewer src/components/Button.js
-/agentfile:run pr-summarizer https://github.com/user/repo/pull/123
-/agentfile:create security-scanner Scan for OWASP vulnerabilities and produce a risk report
-/agentfile:list
-```
-
-### How It Works
-
-When an IDE agent sees an `/agentfile:` command, it:
-
-1. **Parses** the subcommand (`run` / `create` / `list`)
-2. **`list`** — scans `workflows/*/workflow.yaml` and returns names + descriptions, no LLM needed
-3. **`create`** — invokes `workflow-creator` in IDE mode with the name and description pre-set
-4. **`run`** — locates `workflows/<name>/workflow.yaml`, checks `execution.preferred`, loads agents and skills, executes steps sequentially
-
-→ Full IDE processing guide: [docs/ide-slash-commands.md](./docs/ide-slash-commands.md)
-
-### IDE-Specific Instructions
-
-| IDE | How to Use |
-|-----|------------|
-| **Cursor** | Type `/agentfile:run name args` in composer |
-| **Windsurf** | Use slash command in cascade or rules |
-| **Claude Code** | `claude "/agentfile:run name args"` |
-| **GitHub Copilot** | Add to workspace instructions |
-| **Cline/Roo** | Include in system prompt |
-
----
-
-## Project Structure
-
-```
-agentfile/
-  AGENTS.md                        # ← IDE agents read this first — slash command protocol
-  CLAUDE.md                        # Claude Code pointer → AGENTS.md
-  .cursorrules                     # Cursor pointer → AGENTS.md
-  .windsurfrules                   # Windsurf pointer → AGENTS.md
-  .clinerules                      # Cline/Roo pointer → AGENTS.md
-  SPEC.md                          # Formal specification
-  schema/
-    workflow.schema.json           # JSON Schema (IDE autocomplete + validation)
-  examples/
-    hello-world/                   # Example: minimal workflow
-    pr-summarizer/                 # Example: PR summary workflow
-  workflows/
-    code-reviewer/                 # Example: code review workflow
-    slash-demo/                    # Demo: slash command testing
-    workflow-creator/              # Meta-workflow: generates new workflows
-    test-workflow/                 # Test workflow for validation
-    ide-only/                      # IDE-only execution demo
+<project-root>/
+  agentfile.yaml          # Project manifest (optional)
+  AGENTS.md               # Slash command protocol + hard rules
+  CLAUDE.md               # → points to AGENTS.md (Claude Code)
+  .cursorrules            # → points to AGENTS.md (Cursor)
+  .windsurfrules          # → points to AGENTS.md (Windsurf)
   shared/
-    AGENTS.md                      # Global agent rules (injected in CLI calls)
-    project.md                     # Project-level conventions (injected in CLI calls)
-  cli/                             # Node.js CLI source
-  docs/
-    concepts.md                    # Deep dive: how everything works
-    ide-slash-commands.md          # Full slash command reference
-  ~/.agentfile/
-    config.json                    # User configuration (API keys, defaults)
+    project.md            # Stack, conventions, global rules — injected into every call
+  workflows/
+    <workflow-name>/
+      workflow.yaml
+      agents/
+      skills/
+      scripts/
+        ide/
+        cli/
+  artifacts/              # Generation staging workspace (gitignored per run)
+  outputs/                # Runtime step outputs (gitignored)
 ```
 
 ---
 
-## IDE Agent Compatibility
+## Requirements
 
-| Agent | How to use |
-|-------|------------|
-| Cursor | Paste workflow instructions into composer or `.cursor/rules` |
-| Windsurf | Use cascade or add to rules file |
-| GitHub Copilot | Add to workspace instructions |
-| Claude Code | Pass `workflow.yaml` as task context |
-| Cline | Reference in system prompt |
-| Roo | Reference in system prompt |
-
-### Cross-Platform Execution
-
-- **Windows**: Auto-detects PowerShell with execution policy bypass
-- **macOS/Linux**: Uses bash by default
-- **CLI Runtime**: Requires `scripts/run.sh` and `scripts/run.ps1` 
-- **IDE Agents**: Execute steps directly (no scripts needed)
-
-Configure default shell with `agentfile config set shell <bash|pwsh>`
-
-### Execution Modes
-
-Agentfile workflows support two execution modes with dual script support:
-
-**IDE Mode (Default)**
-- Follows `workflow.yaml` steps directly
-- Uses `scripts/ide/` instructions for guidance
-- No external dependencies required
-- Best for interactive development
-
-**CLI Mode**
-- Executes `scripts/cli/run.sh` or `scripts/cli/run.ps1`
-- Scripts handle API calls and orchestration
-- Required for automation/CI/CD
-- Best for production workflows
-
-**Dual Script System**
-```yaml
-# workflow.yaml
-execution:
-  preferred: "ide"    # or "cli"
-```
-
-**Generated Structure:**
-```
-scripts/
-  ide/                  # IDE agent instructions
-    instructions.md     # Step-by-step guide
-    steps.md           # IDE-specific steps
-  cli/                  # CLI runtime scripts
-    run.sh             # Unix/Linux script
-    run.ps1            # Windows PowerShell
-  README.md              # Execution documentation
-```
-
-IDE agents automatically detect the preferred mode and execute accordingly.
-
----
-
-## Contributing
-
-New examples, IDE adapter guides, and spec improvements are all welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-```bash
-git checkout -b my-feature
-# make your changes
-git commit -m "add: my-workflow example"
-# open a pull request
-```
+- Node.js 18+
+- An IDE with an AI agent (Cursor, Windsurf, Claude Code, Cline, etc.)
 
 ---
 
 ## License
 
-MIT — see [LICENSE](./LICENSE)
+MIT — see [LICENSE](LICENSE).
+
+---
+
+**Spec:** [SPEC.md](SPEC.md) · **Concepts:** [docs/concepts.md](docs/concepts.md) · **Slash commands:** [docs/ide-slash-commands.md](docs/ide-slash-commands.md) · **GitHub:** [github.com/TisoneK/agentfile](https://github.com/TisoneK/agentfile)
