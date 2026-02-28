@@ -1,9 +1,9 @@
 'use strict';
 
-const fs    = require('fs');
 const path  = require('path');
 const chalk = require('chalk');
 const yaml  = require('js-yaml');
+const fileOps = require('../../../src/js-utils/file-ops');
 const { log, findProjectRoot, listWorkflows } = require('../lib/utils');
 
 module.exports = async function list(opts) {
@@ -32,13 +32,15 @@ module.exports = async function list(opts) {
     let version     = '';
     let stepCount   = 0;
     try {
-      const raw  = fs.readFileSync(w.yaml, 'utf8');
-      const parsed = yaml.load(raw);
-      description = parsed.description
-        ? parsed.description.trim().split('\n')[0].slice(0, 70)
-        : '';
-      version   = parsed.version || '';
-      stepCount = Array.isArray(parsed.steps) ? parsed.steps.length : 0;
+      const readResult = fileOps.readFile(w.yaml);
+      if (readResult.success) {
+        const parsed = yaml.load(readResult.content);
+        description = parsed.description
+          ? parsed.description.trim().split('\n')[0].slice(0, 70)
+          : '';
+        version   = parsed.version || '';
+        stepCount = Array.isArray(parsed.steps) ? parsed.steps.length : 0;
+      }
     } catch (_) {}
 
     console.log(

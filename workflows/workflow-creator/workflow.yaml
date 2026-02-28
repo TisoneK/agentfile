@@ -6,6 +6,8 @@ description: >
   requests. Outputs are staged in artifacts/<workflow-name>/<run-id>/ (factory)
   before being promoted to workflows/<workflow-name>/ (shipped). Factory files
   never appear in the final workflow. Supports resume via /agentfile:continue.
+  **JavaScript workflows use js-utils integration** for robust, cross-platform
+  compatibility with state management, file operations, and CLI parsing.
 
 execution:
   preferred: "ide"
@@ -47,15 +49,10 @@ output:
 steps:
   - id: init
     name: Initialize Artifact Run
-    agent: agents/analyst.md
-    skill: skills/generate-manifest.md
-    input: $WORKFLOW_REQUEST
     goal: >
-      Create the artifact run directory at artifacts/{workflow_name}/{run_id}/
-      and write the initial manifest.json with status "generating" and all
-      steps set to "pending". The run_id is the current UTC timestamp in the
-      format YYYY-MM-DDTHH-MM-SS. Output the run directory path so subsequent
-      steps can reference it.
+      Create the artifact run directory at artifacts/{workflow_name}/{run_id}/.
+      Write an initial manifest.json with status "in_progress".
+      Use ISO 8601 format for run_id: YYYY-MM-DDTHH-MM-SS.
     produces: artifacts/{workflow_name}/{run_id}/manifest.json
 
   - id: clarify
@@ -125,8 +122,9 @@ steps:
     goal: >
       Analyse the workflow design and identify every non-LLM operation — file reads,
       writes, validation, transformation, environment checks, etc. Generate a dedicated
-      utility script (both .sh and .ps1) for each operation. Write to
-      artifacts/{workflow_name}/{run_id}/06-scripts/utils/. These will be called by
+      utility script (both .sh and .ps1) for each operation. For JavaScript workflows,
+      use js-utils modules from src/js-utils/ instead of manual implementations.
+      Write to artifacts/{workflow_name}/{run_id}/06-scripts/utils/. These will be called by
       both cli/ and ide/ scripts. Register each with role "script_utils" in manifest.json.
     produces: artifacts/{workflow_name}/{run_id}/06-scripts/utils/
 
@@ -139,13 +137,13 @@ steps:
       - artifacts/{workflow_name}/{run_id}/06-scripts/utils/
     goal: >
       Generate BOTH CLI and IDE execution scripts with equal completeness. CLI scripts
-      (run.sh, run.ps1) MUST implement execution-state — init_state(), check_gate(),
-      step_start(), step_complete(), step_fail(), step_await_approval(), and --resume
-      support via locate_run(). Gated steps must call step_await_approval and exit 0.
-      Both must call into utils/ scripts for non-LLM work. IDE scripts (instructions.md,
-      steps.md, register.sh, register.ps1) reference utils/ where needed. Write to
-      artifacts/{workflow_name}/{run_id}/06-scripts/cli/ and 06-scripts/ide/.
-      Register each file with the appropriate role in manifest.json.
+      (run.sh, run.ps1) implement execution-state for running workflow steps via API.
+      JavaScript CLI scripts (run.js) MUST use js-utils standard template with state-manager,
+      file-ops, cli-parser, and other modules from src/js-utils/. IDE scripts (instructions.md, 
+      steps.md) guide the IDE agent through execution. Do NOT generate register.sh or 
+      register.ps1 — promotion is handled by `agentfile promote`. Both script types must 
+      call into utils/ for non-LLM work. Write to artifacts/{workflow_name}/{run_id}/06-scripts/cli/ 
+      and 06-scripts/ide/. Register each file with the appropriate role in manifest.json.
     produces: artifacts/{workflow_name}/{run_id}/06-scripts/
 
   - id: review
@@ -168,20 +166,8 @@ steps:
 
   - id: promote
     name: Promote to Workflow
-    agent: agents/generator.md
-    skill: skills/promote-workflow.md
-    input:
-      - artifacts/{workflow_name}/{run_id}/manifest.json
-      - artifacts/{workflow_name}/{run_id}/03-workflow.yaml
-      - artifacts/{workflow_name}/{run_id}/04-agents/
-      - artifacts/{workflow_name}/{run_id}/05-skills/
-      - artifacts/{workflow_name}/{run_id}/06-scripts/
-      - artifacts/{workflow_name}/{run_id}/07-review.md
     goal: >
-      Cross the factory→shipped boundary. Assemble ONLY final deliverables into
-      workflows/{workflow_name}/ — no manifest.json, no numbered prefixes, no
-      _all.md bundles, no design docs. Archive the artifact run to
-      outputs/{workflow_name}/{run_id}/build/. Update manifest.json in the archive
-      to status "registered". Write workflow_status.json (provenance pointer only)
-      to the registered workflow directory. Verify no factory files leaked.
+      Move all generated files from artifacts/{workflow_name}/ to workflows/{workflow_name}/.
+      Only include final deliverables: workflow.yaml, agents/, skills/, outputs/ (empty, gitignored).
+      Update manifest.json to status "registered".
     produces: workflows/{workflow_name}/

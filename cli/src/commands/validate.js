@@ -1,10 +1,10 @@
 'use strict';
 
-const fs    = require('fs');
 const path  = require('path');
 const chalk = require('chalk');
 const yaml  = require('js-yaml');
 const Ajv   = require('ajv');
+const fileOps = require('../../../src/js-utils/file-ops');
 const { log, findProjectRoot, findWorkflow, listWorkflows } = require('../lib/utils');
 
 module.exports = async function validate(workflowName, opts) {
@@ -18,7 +18,12 @@ module.exports = async function validate(workflowName, opts) {
   const schemaPath = path.join(__dirname, '../../../schema/workflow.schema.json');
   let schema;
   try {
-    schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    const readResult = fileOps.readFile(schemaPath);
+    if (readResult.success) {
+      schema = JSON.parse(readResult.content);
+    } else {
+      schema = null;
+    }
   } catch (_) {
     log.warn('workflow.schema.json not found — skipping schema validation.');
     schema = null;
@@ -51,8 +56,14 @@ module.exports = async function validate(workflowName, opts) {
     // ── Parse workflow.yaml ──────────────────────────────────────────────────
     let parsed;
     try {
-      const raw = fs.readFileSync(w.yaml, 'utf8');
-      parsed = yaml.load(raw);
+      const readResult = fileOps.readFile(w.yaml);
+      if (!readResult.success) {
+        errors.push(`workflow.yaml read error: ${readResult.error.message}`);
+        printResults(passed, warnings, errors);
+        allPassed = false;
+        continue;
+      }
+      parsed = yaml.load(readResult.content);
       passed.push('workflow.yaml is valid YAML');
     } catch (e) {
       errors.push(`workflow.yaml parse error: ${e.message}`);
@@ -88,7 +99,7 @@ module.exports = async function validate(workflowName, opts) {
       // Agent file exists
       if (step.agent) {
         const agentPath = path.join(w.path, step.agent);
-        if (fs.existsSync(agentPath)) {
+        if (fileOps.existsSync(agentPath)) {
           passed.push(`Agent exists: ${step.agent}`);
         } else {
           errors.push(`Step "${step.id}": agent file not found: ${step.agent}`);
@@ -98,7 +109,7 @@ module.exports = async function validate(workflowName, opts) {
       // Skill file exists
       if (step.skill) {
         const skillPath = path.join(w.path, step.skill);
-        if (fs.existsSync(skillPath)) {
+        if (fileOps.existsSync(skillPath)) {
           passed.push(`Skill exists: ${step.skill}`);
         } else {
           errors.push(`Step "${step.id}": skill file not found: ${step.skill}`);
@@ -109,13 +120,13 @@ module.exports = async function validate(workflowName, opts) {
       if (step.action === 'shell' && step.script) {
         if (step.script.bash) {
           const p = path.join(w.path, step.script.bash);
-          fs.existsSync(p)
+          fileOps.existsSync(p)
             ? passed.push(`Script exists: ${step.script.bash}`)
             : errors.push(`Step "${step.id}": bash script not found: ${step.script.bash}`);
         }
         if (step.script.pwsh) {
           const p = path.join(w.path, step.script.pwsh);
-          fs.existsSync(p)
+          fileOps.existsSync(p)
             ? passed.push(`Script exists: ${step.script.pwsh}`)
             : warnings.push(`Step "${step.id}": pwsh script not found: ${step.script.pwsh}`);
         }
@@ -130,17 +141,22 @@ module.exports = async function validate(workflowName, opts) {
     // ── Run scripts present ───────────────────────────────────────────────────
     const runSh  = path.join(w.path, 'scripts', 'run.sh');
     const runPs1 = path.join(w.path, 'scripts', 'run.ps1');
-    fs.existsSync(runSh)
+    fileOps.existsSync(runSh)
       ? passed.push('scripts/run.sh present')
       : warnings.push('scripts/run.sh not found (reference runtime unavailable for bash)');
-    fs.existsSync(runPs1)
+    fileOps.existsSync(runPs1)
       ? passed.push('scripts/run.ps1 present')
       : warnings.push('scripts/run.ps1 not found (reference runtime unavailable for pwsh)');
 
     // ── outputs gitignored ────────────────────────────────────────────────────
     const gitignore = path.join(w.path, '.gitignore');
-    if (fs.existsSync(gitignore) && fs.readFileSync(gitignore, 'utf8').includes('outputs')) {
-      passed.push('outputs/ is gitignored');
+    if (fileOps.existsSync(gitignore)) {
+      const readResult = fileOps.readFile(gitignore);
+      if (readResult.success && readResult.content.includes('outputs')) {
+        passed.push('outputs/ is gitignored');
+      } else {
+        warnings.push('outputs/ is not gitignored — consider adding it');
+      }
     } else {
       warnings.push('outputs/ is not gitignored — consider adding it');
     }

@@ -1,0 +1,64 @@
+name: compat-test-workflow
+version: 1.0.0
+specVersion: "1.0"
+description: >
+  A test workflow for backward compatibility validation.
+  This workflow tests all step types and variable interpolation.
+
+execution:
+  preferred: "ide"
+
+trigger:
+  type: natural-language
+  input_var: USER_REQUEST
+
+output:
+  directory: outputs
+
+variables:
+  project_name: test-project
+  output_lang: en
+
+steps:
+  - id: step1
+    name: Test Action Step
+    action: echo "Action step executed"
+    if: "true"
+
+  - id: step2
+    name: Test Agent Step
+    agent: agents/test-agent.md
+    skill: skills/test-skill.md
+    input: $USER_REQUEST
+    goal: Test agent execution
+    optional: false
+
+  - id: step3
+    name: Test Check Step
+    check: condition
+    action: echo "Check step executed"
+
+  - id: step4
+    name: Test Ask Step
+    ask: "What is your name?"
+    action: echo "User responded"
+
+  - id: step5
+    name: Test Invoke Workflow
+    invoke-workflow: test-workflow
+    input: test-input
+
+  - id: step6
+    name: Test Template Output
+    template-output: output/test.md
+    content: "# Test Output"
+
+  - id: step7
+    name: Test Repeat Step
+    repeat: 2
+    action: echo "Repeated step"
+
+  - id: step8
+    name: Test For Each Step
+    for-each: items
+    action: echo "For each item"

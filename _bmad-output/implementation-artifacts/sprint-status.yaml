@@ -1,8 +1,7 @@
-# generated: 2026-02-24T21:47:19.790Z
-# project: agentfile
-# project_key: NOKEY
-# tracking_system: file-system
-# story_location: _bmad-output/implementation-artifacts
+# Sprint Status
+# Generated for agentfile project
+# Tracking system: file-system
+# Story location: _bmad-output/implementation-artifacts
 
 # STATUS DEFINITIONS:
 # ==================
@@ -25,7 +24,7 @@
 # Retrospective Status:
 #   - optional: Can be completed but not required
 #   - done: Retrospective has been completed
-#
+
 # WORKFLOW NOTES:
 # ===============
 # - Epic transitions to 'in-progress' automatically when first story is created
@@ -33,51 +32,78 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-02-24T21:47:19.790Z
+generated: 2026-02-27
 project: agentfile
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  # Epic 1: Project Foundation & Setup
-  epic-1: done
-  1-1-initialize-node-js-project-structure: done
-  1-2-configure-project-directory-structure: done
-  1-3-set-up-basic-testing-infrastructure: done
+  # Epic 7: IDE Setup & Configuration  ← FIRST (per approved Sprint Change Proposal)
+  epic-7: in-progress
+  7-1-cli-interactive-wizard-for-ide-selection: done
+  7-2-create-and-populate-agentfile-directory: done
+  7-3-generate-ide-specific-wrapper-files: done
+  7-4-implement-template-system-for-static-file-copying: done
+  7-5-implement-idempotent-re-run-logic: done
+  7-6-implement-file-operations-using-js-utils: review
+  7-7-implement-cwd-resolution-for-agentfile-init: review
+  epic-7-retrospective: optional
+
+  # Epic 1: Core Workflow Management  ← SECOND (reordered per change proposal)
+  epic-1: backlog
+  1-1-create-new-workflow-via-slash-command: backlog
+  1-2-define-workflow-steps-with-yaml: backlog
+  1-3-execute-workflow-via-slash-command: backlog
+  1-4-list-all-available-workflows: backlog
+  1-5-view-workflow-execution-status-and-history: backlog
   epic-1-retrospective: optional
 
-  # Epic 2: Core File Operations
-  epic-2: done
-  2-1-implement-file-copy-operation: done
-  2-2-implement-file-move-operation: done
-  2-3-implement-directory-create-operation: done
-  2-4-implement-file-delete-operation: done
-  2-5-add-comprehensive-error-handling: done
+  # Epic 2: Workflow Execution Engine  ← BACKLOG (reordered per change proposal)
+  epic-2: backlog
+  2-1-execute-file-operations: backlog
+  2-2-process-templates-with-variable-substitution: backlog
+  2-3-persist-workflow-state-for-checkpoint-resume: backlog
+  2-4-handle-errors-gracefully-with-clear-messages: backlog
+  2-5-execute-steps-sequentially-or-in-parallel: backlog
   epic-2-retrospective: optional
 
-  # Epic 3: Template Processing Engine
-  epic-3: in-progress
-  3-1-implement-basic-variable-substitution: in-progress
-  3-2-add-conditional-block-support: done
-  3-3-add-iteration-support: done
-  3-4-implement-partial-templates: done
-  3-5-add-template-syntax-validation: done
+  # Epic 3: IDE Integration  ← BACKLOG
+  epic-3: backlog
+  3-1-configure-ide-native-slash-commands: backlog
+  3-2-ide-invokes-agentfile-cli-for-agentfile-run: backlog
+  3-3-ide-invokes-agentfile-cli-for-agentfile-create: backlog
+  3-4-ide-invokes-agentfile-cli-for-agentfile-list: backlog
+  3-5-display-workflow-results-in-ide-output: backlog
   epic-3-retrospective: optional
 
-  # Epic 4: Workflow State Management
+  # Epic 4: Team Workflow Sharing  ← BACKLOG
   epic-4: backlog
-  4-1-implement-workflow-state-persistence: backlog
-  4-2-implement-step-tracking: backlog
-  4-3-add-checkpoint-resume-capabilities: backlog
+  4-1-share-workflows-via-shared-repositories: backlog
+  4-2-import-team-standard-workflows: backlog
+  4-3-version-control-workflows: backlog
   4-4-implement-rollback-functionality: backlog
   epic-4-retrospective: optional
 
-  # Epic 5: CLI Integration
+  # Epic 5: Extensibility System  ← BACKLOG
   epic-5: backlog
-  5-1-implement-command-parsing: backlog
-  5-2-add-environment-validation: backlog
-  5-3-implement-progress-tracking: backlog
-  5-4-integrate-with-workflow-yaml: backlog
+  5-1-create-custom-agents-with-defined-capabilities: backlog
+  5-2-create-custom-skills-for-reusable-logic: backlog
+  5-3-extend-workflows-with-custom-templates: backlog
+  5-4-load-third-party-agents-and-skills: backlog
   5-5-maintain-backward-compatibility: backlog
   epic-5-retrospective: optional
+
+  # Epic 6: Developer Experience & Observability  ← BACKLOG
+  epic-6: backlog
+  6-1-install-agentfile-via-npm: backlog
+  6-2-get-clear-error-messages-when-workflows-fail: backlog
+  6-3-debug-workflow-execution-with-step-by-step-output: backlog
+  6-4-access-documentation-from-within-the-ide: backlog
+  6-5-configure-default-workflow-execution-options: backlog
+  6-6-set-up-environment-variables-for-workflows: backlog
+  6-7-customize-output-verbosity-levels: backlog
+  6-8-log-workflow-execution-history: backlog
+  6-9-view-past-workflow-execution-results: backlog
+  6-10-identify-which-workflows-take-longest-to-execute: backlog
+  epic-6-retrospective: optional

@@ -1,18 +1,19 @@
 'use strict';
 
-const path   = require('path');
-const fs     = require('fs');
-const chalk  = require('chalk');
-const { execSync } = require('child_process');
-const { log, findProjectRoot, findWorkflow } = require('../lib/utils');
-const { loadConfig } = require('./config');
+const path  = require('path');
+const chalk = require('chalk');
+const fileOps = require('../../../src/js-utils/file-ops');
+const { log, findProjectRoot, findWorkflow, writeFile } = require('../lib/utils');
+
+// ── run ────────────────────────────────────────────────────────────────────────
+// Initialises a new execution-state.json for a workflow run.
+// The actual LLM work is done by the IDE agent.
+// No shell exec, no API key required.
+// ──────────────────────────────────────────────────────────────────────────────
 
 module.exports = async function run(workflowName, opts) {
   const projectRoot = findProjectRoot();
-  if (!projectRoot) {
-    log.error('No Agentfile project found. Run `agentfile init` first.');
-    process.exit(1);
-  }
+  if (!projectRoot) { log.error('No Agentfile project found.'); process.exit(1); }
 
   const workflow = findWorkflow(projectRoot, workflowName);
   if (!workflow) {
@@ -21,88 +22,91 @@ module.exports = async function run(workflowName, opts) {
     process.exit(1);
   }
 
-  // ── Resolve API key & model ──────────────────────────────────────────────────
-  const config = loadConfig();
-  const apiKey = opts.key
-    || process.env.ANTHROPIC_API_KEY
-    || process.env.AGENT_API_KEY
-    || config.apiKey;
-  const model = opts.model || process.env.AGENT_MODEL || config.model || 'claude-sonnet-4-6';
-
-  if (!apiKey) {
-    log.error('No API key provided. Use --key, set ANTHROPIC_API_KEY, or run "agentfile config set api-key <key>"');
-    process.exit(1);
+  if (opts.resume) {
+    // Delegate to resume logic
+    const cmdResume = require('./resume');
+    return cmdResume(workflowName, { run: opts.runId });
   }
 
-  // ── Resolve input ────────────────────────────────────────────────────────────
   const input = opts.input || process.env.AGENT_INPUT;
-  if (!input && !opts.resume) {
+  if (!input) {
     log.error('No input provided. Use --input "your text" or set AGENT_INPUT.');
     process.exit(1);
   }
 
-  // ── Resolve shell ────────────────────────────────────────────────────────────
-  const os = require('os');
-  const isWindows = os.platform() === 'win32';
-  const shell = opts.shell || config.defaultShell || (isWindows ? 'pwsh' : 'bash');
+  // ── Load workflow.yaml to read steps ────────────────────────────────────────
+  const yaml = require('js-yaml');
+  const readResult = fileOps.readFile(workflow.yaml);
+  if (!readResult.success) {
+    log.error(`Failed to read workflow.yaml: ${readResult.error.message}`);
+    process.exit(1);
+  }
+  const workflowYaml = yaml.load(readResult.content);
+  const steps = (workflowYaml.steps || []).map(s => ({
+    id:           s.id,
+    name:         s.name || s.id,
+    status:       'pending',
+    started_at:   null,
+    completed_at: null,
+    artifact:     null,
+    error:        null,
+    custom:       {},
+  }));
 
-  // ── Resolve script path — scripts/cli/ is the correct location ──────────────
-  const scriptFile = shell === 'pwsh'
-    ? path.join(workflow.path, 'scripts', 'cli', 'run.ps1')
-    : path.join(workflow.path, 'scripts', 'cli', 'run.sh');
+  // ── Create run directory and execution-state.json ───────────────────────────
+  const now   = new Date();
+  const runId = now.toISOString().replace(/\.\d{3}Z$/, '').replace(/:/g, '-').replace('Z', '');
+  const runDir     = path.join(workflow.path, 'outputs', runId);
+  const stateFile  = path.join(runDir, 'execution-state.json');
 
-  if (!fs.existsSync(scriptFile)) {
-    log.error(`Runtime script not found: ${scriptFile}`);
-    console.log('');
-    log.info(chalk.bold('Expected location:'));
-    log.info(`  workflows/${workflowName}/scripts/cli/run.${shell === 'pwsh' ? 'ps1' : 'sh'}`);
-    console.log('');
-    log.info(chalk.bold('Why this happened:'));
-    log.info('  This workflow has no CLI execution scripts.');
-    log.info('  It may be designed for IDE agents only, or was created before');
-    log.info('  the scripts/cli/ structure was introduced.');
-    console.log('');
-    log.info(chalk.bold('Options:'));
-    log.info('  1. Use an IDE agent: load workflow.yaml and follow scripts/ide/steps.md');
-    log.info('  2. Re-generate with: agentfile create (uses workflow-creator)');
+  const dirResult = fileOps.ensureDir(runDir);
+  if (!dirResult.success) {
+    log.error(`Failed to create run directory: ${dirResult.error.message}`);
     process.exit(1);
   }
 
-  // ── Build resume args ────────────────────────────────────────────────────────
-  const resumeArgs = opts.resume
-    ? `--resume ${opts.runId || ''}`
-    : '';
+  const state = {
+    workflow:     workflowName,
+    run_id:       runId,
+    started_at:   now.toISOString(),
+    updated_at:   now.toISOString(),
+    status:       'running',
+    input,
+    current_step: steps[0]?.id || null,
+    steps,
+    errors:       [],
+  };
 
-  log.step(`Running workflow: ${chalk.bold(workflowName)}`);
-  log.dim(`Script:  ${scriptFile}`);
-  const shellSource = opts.shell ? 'explicit' : config.defaultShell ? 'config' : 'auto-detected';
-  log.dim(`Shell:   ${shell} (${shellSource})`);
-  log.dim(`Model:   ${model}`);
-  if (input) log.dim(`Input:   ${input.length > 60 ? input.slice(0, 60) + '...' : input}`);
-  if (opts.resume) log.dim(`Mode:    resume${opts.runId ? ` (run: ${opts.runId})` : ' (latest)'}`);
+  writeFile(stateFile, JSON.stringify(state, null, 2) + '\n');
+
+  log.step(`Workflow: ${chalk.bold(workflowName)}`);
+  log.success(`Run initialised: ${runId}`);
+  console.log('');
+  console.log(`  ${chalk.gray('Input:')}   ${input.length > 60 ? input.slice(0, 60) + '...' : input}`);
+  console.log(`  ${chalk.gray('State:')}   ${path.relative(projectRoot, stateFile)}`);
+  console.log(`  ${chalk.gray('Steps:')}   ${steps.length}`);
   console.log('');
 
-  // ── Execute ──────────────────────────────────────────────────────────────────
-  const cmd = shell === 'pwsh'
-    ? `pwsh -ExecutionPolicy Bypass "${scriptFile}" ${resumeArgs}`
-    : `bash "${scriptFile}" ${resumeArgs}`;
+  if (workflowYaml.execution?.preferred === 'cli') {
+    log.warn('This workflow is configured for CLI execution (execution.preferred: cli).');
+    log.warn('CLI script execution has been removed. Use IDE mode instead.');
+    log.dim('  Load scripts/ide/instructions.md in your IDE agent to proceed.');
+  } else {
+    const ideInstructions = path.join(workflow.path, 'scripts', 'ide', 'instructions.md');
 
-  try {
-    execSync(cmd, {
-      env: {
-        ...process.env,
-        ANTHROPIC_API_KEY: apiKey,
-        AGENT_API_KEY:     apiKey,
-        AGENT_MODEL:       model,
-        AGENT_INPUT:       input || '',
-      },
-      stdio: 'inherit',
-      cwd:   workflow.path,
-    });
-  } catch (err) {
-    log.error(`Workflow "${workflowName}" exited with an error.`);
-    log.info(`Check status:  ${chalk.cyan(`agentfile status ${workflowName}`)}`);
-    log.info(`Resume:        ${chalk.cyan(`agentfile resume ${workflowName}`)}`);
-    process.exit(err.status || 1);
+    console.log('  Load this workflow in your IDE agent to execute steps:');
+    if (fileOps.existsSync(ideInstructions)) {
+      console.log(chalk.gray(`    ${path.relative(projectRoot, ideInstructions)}`));
+    }
+    console.log('');
+    console.log('  Tell your IDE agent:');
+    console.log(chalk.cyan(`    "Execute workflow '${workflowName}', run ID '${runId}'."`));
+    console.log(chalk.cyan(`    Start from step '${steps[0]?.id || 'first'}'."`));
+    console.log('');
+    console.log('  Available commands:');
+    console.log(chalk.cyan(`    agentfile approve ${workflowName} <step-id>`) + '   ' + chalk.gray('- Approve a gate step'));
+    console.log(chalk.cyan(`    agentfile status ${workflowName}`) + '              ' + chalk.gray('- Check run status'));
+    console.log(chalk.cyan(`    agentfile resume ${workflowName}`) + '              ' + chalk.gray('- Resume from current step'));
   }
+  console.log('');
 };

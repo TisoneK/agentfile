@@ -47,6 +47,17 @@ trigger:
 output:
   directory: outputs/   # relative to workflows/<name>/ — NOT artifacts/
 
+# js-utils integration for JavaScript workflows
+js_utils:
+  enabled: true         # Automatically import js-utils modules
+  modules:              # Auto-import these modules in generated scripts
+    - state-manager
+    - file-ops
+    - cli-parser
+    - template-processor
+    - env-validator
+    - progress-tracker
+
 steps:
   - id: <step-id>
     ...
@@ -82,6 +93,24 @@ steps:
   produces: outputs/<artifact>
 ```
 
+### JavaScript Step Fields (Required Standard)
+
+```yaml
+- id: <id>
+  name: <n>
+  action: shell
+  script:
+    node: scripts/cli/<n>.js        # JavaScript using js-utils (required)
+  goal: >
+    <description>
+  produces: outputs/<artifact>
+  js_utils:                         # Optional step-specific js-utils config
+    modules:                         # Additional modules for this step
+      - template-processor
+```
+
+**Rule:** All JavaScript steps MUST use js-utils. The `js_utils.enabled: true` at workflow level ensures automatic imports.
+
 ---
 
 ## Path Reference Guide
@@ -92,7 +121,9 @@ steps:
 | Agent file reference | `agents/analyst.md` | `workflows/my-workflow/agents/analyst.md` |
 | Skill file reference | `skills/my-skill.md` | `artifacts/.../skills/my-skill.md` |
 | Script reference | `scripts/cli/run.sh` | `scripts/run.sh` |
+| JavaScript script reference | `scripts/cli/run.js` | `scripts/run.js` |
 | Utils script reference | `scripts/utils/validate.sh` | `utils/validate.sh` |
+| js-utils import | `src/js-utils/file-ops` | manual `fs` operations |
 
 All paths in a workflow's `workflow.yaml` are **relative to the workflow's own directory** (`workflows/<name>/`).
 
@@ -119,3 +150,56 @@ All paths in a workflow's `workflow.yaml` are **relative to the workflow's own d
 - [ ] `trigger.input_var` is defined
 - [ ] `output.directory` is `outputs/`
 - [ ] `execution.preferred` is set to `"ide"` or `"cli"`
+
+---
+
+## Generate run.md
+
+Every workflow MUST include a `run.md` file in the workflow root directory. This file provides natural language instructions that help LLMs understand how to run the workflow without needing to parse shell scripts.
+
+### run.md Template
+
+```markdown
+# Run: {workflow_name}
+
+This document explains how to run this workflow in natural language for LLMs.
+
+## Quick Start
+
+To run this workflow, use:
+
+```
+{command}
+```
+
+Example:
+```
+{command} "{example_input}"
+```
+
+## Commands
+
+### Primary Command
+Describe the main command and its usage.
+
+### Additional Commands (if any)
+Describe any other available commands.
+
+## How It Works
+
+1. **Step 1** - Description of what happens in step 1
+2. **Step 2** - Description of what happens in step 2
+...
+
+## Requirements
+
+- Node.js 18+
+- {other requirement 1}
+- {other requirement 2}
+
+## Output
+
+Describe what the workflow produces.
+```
+
+**Important:** Always generate a `run.md` file alongside `workflow.yaml`. This is required for LLM accessibility.

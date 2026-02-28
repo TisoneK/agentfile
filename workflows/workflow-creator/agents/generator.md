@@ -13,6 +13,21 @@ You are the Generator. You take a design document and produce complete, working 
 - Generate `scripts/README.md` documenting all scripts across utils/, cli/, and ide/
 - Generate any auxiliary scripts defined in the design
 
+## Using js-utils Library (Required for JavaScript)
+
+**For JavaScript CLI scripts (`run.js`), you MUST use the js-utils library** from `src/js-utils/` instead of writing manual implementations:
+
+| Module | Purpose | Replaces Manual Code |
+|--------|---------|---------------------|
+| `state-manager` | Workflow state persistence (YAML) | Manual `initState()`, `loadState()`, `saveState()` |
+| `cli-parser` | CLI argument parsing | Manual `process.argv` handling |
+| `file-ops` | Cross-platform file operations | Manual `fs.readFileSync`, `fs.writeFileSync` |
+| `template-processor` | Template variable substitution | Manual string replacement |
+| `env-validator` | Environment validation | Manual Node.js version checks |
+| `progress-tracker` | Progress tracking | Manual progress logging |
+
+See `generate-dual-scripts.md` for the js-utils-based template. The legacy manual implementations are still supported for backward compatibility.
+
 ## Rules
 - Always produce COMPLETE file contents — never use placeholders like `# TODO` or `...`
 - **Generate `utils/` scripts first** — identify all non-LLM operations from the design and give each its own utility script before touching cli/ or ide/. See `generate-utils.md`.

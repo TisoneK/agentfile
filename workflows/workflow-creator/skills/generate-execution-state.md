@@ -6,6 +6,58 @@ the single source of truth for runtime progress, gate control, and resume.
 
 ---
 
+## Using js-utils (Recommended for JavaScript)
+
+**For JavaScript implementations, use the [`state-manager`](../../src/js-utils/state-manager.js) module** from js-utils instead of writing manual state management code. It provides:
+- Workflow state persistence using YAML files
+- Async/await API for state operations
+- Built-in error handling and validation
+
+```javascript
+// Using js-utils state-manager
+const stateManager = require('../../../src/js-utils/state-manager');
+
+async function initWorkflowState(workflowId, input) {
+  // Validate and create state directory
+  const dirResult = await stateManager.ensureStateDirectory();
+  if (!dirResult.success) throw new Error(dirResult.error.message);
+  
+  // Create initial state
+  const state = {
+    workflow: workflowId,
+    run_id: new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19),
+    started_at: new Date().toISOString(),
+    status: 'running',
+    input,
+    current_step: null,
+    steps: [],
+    errors: []
+  };
+  
+  // Save state using js-utils
+  const saveResult = await stateManager.saveState(workflowId, state);
+  if (!saveResult.success) throw new Error(saveResult.error.message);
+  
+  return state;
+}
+
+async function updateStepState(workflowId, stepId, updates) {
+  const loadResult = await stateManager.loadState(workflowId);
+  if (!loadResult.success) throw new Error(loadResult.error.message);
+  
+  const state = loadResult.state;
+  const step = state.steps.find(s => s.id === stepId);
+  if (step) Object.assign(step, updates);
+  
+  const saveResult = await stateManager.saveState(workflowId, state);
+  if (!saveResult.success) throw new Error(saveResult.error.message);
+}
+```
+
+**Note**: The js-utils state-manager uses YAML format. For JSON format (as used in execution-state.json), you can use the manual implementation patterns below or convert between formats.
+
+---
+
 ## What execution-state.json Is
 
 Every workflow run writes its own state file at:

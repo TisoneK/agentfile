@@ -1,0 +1,30 @@
+# Agentfile Integration
+
+This project uses [Agentfile](https://github.com/TisoneK/agentfile) for workflow automation.
+
+## Available Commands
+
+Run the following agentfile commands using the CLI:
+
+### /agentfile:run <workflow-name> <args>
+Run an existing workflow in IDE mode.
+- Read workflow definition: ../../.agentfile/run.md
+
+### /agentfile:create <workflow-name> <description>
+Create a new workflow using the workflow-creator pipeline.
+- Read workflow creation: ../../.agentfile/create.md
+
+### /agentfile:list
+List all available workflows in the project.
+- Read workflow listing: ../../.agentfile/list.md
+
+### /agentfile:validate <workflow-name>
+Validate a workflow against the schema.
+- Read validation: ../../.agentfile/validate.md
+
+## Important Notes
+
+- Always validate workflow.yaml with AJV before execution
+- Never create files directly in workflows/ - use workflow-creator pipeline
+- Use agentfile CLI commands instead of running shell scripts directly
+- For more details, read the command definitions in ../.agentfile/

@@ -1,0 +1,27 @@
+{
+  "name": "agentfile",
+  "version": "2.0.0-alpha",
+  "description": "**Agentfile is workflow-as-files for AI agents.**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TisoneK/agentfile.git"
+  },
+  "keywords": [],
+  "author": "Agentfile Team",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/TisoneK/agentfile/issues"
+  },
+  "homepage": "https://github.com/TisoneK/agentfile#readme",
+  "devDependencies": {
+    "jest": "30.2.0"
+  }
+}

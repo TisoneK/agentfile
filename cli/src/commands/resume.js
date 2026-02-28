@@ -1,11 +1,15 @@
 'use strict';
 
-const fs    = require('fs');
 const path  = require('path');
 const chalk = require('chalk');
-const { execSync } = require('child_process');
-const { log, findProjectRoot, findWorkflow } = require('../lib/utils');
-const { loadConfig } = require('./config');
+const fileOps = require('../../../src/js-utils/file-ops');
+const { log, findProjectRoot, findWorkflow, findStateFile } = require('../lib/utils');
+
+// ── resume ─────────────────────────────────────────────────────────────────────
+// Shows resume instructions for an incomplete workflow run.
+// Actual step execution is done by the IDE agent.
+// No shell exec, no API key required.
+// ──────────────────────────────────────────────────────────────────────────────
 
 module.exports = async function resume(workflowName, opts) {
   const projectRoot = findProjectRoot();
@@ -21,7 +25,12 @@ module.exports = async function resume(workflowName, opts) {
     process.exit(1);
   }
 
-  const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  const readResult = fileOps.readFile(stateFile);
+  if (!readResult.success) {
+    log.error(`Failed to read state file: ${readResult.error.message}`);
+    process.exit(1);
+  }
+  const state = JSON.parse(readResult.content);
   const runId = path.basename(path.dirname(stateFile));
 
   if (state.status === 'completed') {
@@ -37,67 +46,32 @@ module.exports = async function resume(workflowName, opts) {
     process.exit(1);
   }
 
-  const config = loadConfig();
-  const apiKey = opts.key
-    || process.env.ANTHROPIC_API_KEY
-    || process.env.AGENT_API_KEY
-    || config.apiKey;
+  const currentStep = state.steps.find(s => s.status === 'pending' || s.status === 'in_progress');
 
-  if (!apiKey) {
-    log.error('No API key found. Set ANTHROPIC_API_KEY or use "agentfile config set api-key <key>"');
-    process.exit(1);
-  }
-
-  const os = require('os');
-  const shell = opts.shell || config.defaultShell || (os.platform() === 'win32' ? 'pwsh' : 'bash');
-  const scriptFile = shell === 'pwsh'
-    ? path.join(workflow.path, 'scripts', 'cli', 'run.ps1')
-    : path.join(workflow.path, 'scripts', 'cli', 'run.sh');
-
-  if (!fs.existsSync(scriptFile)) {
-    log.error(`Run script not found: ${scriptFile}`);
-    process.exit(1);
-  }
-
-  log.step(`Resuming workflow: ${chalk.bold(workflowName)}`);
-  log.dim(`Run ID: ${runId}`);
-  log.dim(`Script: ${scriptFile}`);
+  log.step(`Resume: ${chalk.bold(workflowName)} (run: ${runId})`);
   console.log('');
+  console.log(`  ${chalk.gray('Status:')}       ${state.status}`);
 
-  const cmd = shell === 'pwsh'
-    ? `pwsh -ExecutionPolicy Bypass "${scriptFile}" --resume ${runId}`
-    : `bash "${scriptFile}" --resume ${runId}`;
-
-  try {
-    execSync(cmd, {
-      env: { ...process.env, ANTHROPIC_API_KEY: apiKey, AGENT_API_KEY: apiKey },
-      stdio: 'inherit',
-      cwd: workflow.path,
-    });
-  } catch (err) {
-    log.error('Resume failed.');
-    log.info(`Check status: ${chalk.cyan(`agentfile status ${workflowName}`)}`);
-    process.exit(err.status || 1);
+  if (currentStep) {
+    console.log(`  ${chalk.gray('Current step:')} ${currentStep.id}`);
+  } else if (state.status === 'completed') {
+    console.log(`  ${chalk.gray('Status:')}       ${chalk.green('All steps completed')}`);
+  } else {
+    console.log(`  ${chalk.gray('Current step:')} ${chalk.yellow('No active step')}`);
+    console.log(`  ${chalk.gray('State:')}         Check with agentfile status ${workflowName}`);
   }
+  console.log('');
+  console.log('  Load this run in your IDE agent to continue:');
+
+  const ideInstructions = path.join(workflow.path, 'scripts', 'ide', 'instructions.md');
+  if (fileOps.existsSync(ideInstructions)) {
+    console.log(chalk.gray(`    ${path.relative(findProjectRoot(), ideInstructions)}`));
+  }
+
+  console.log('');
+  console.log(`  Tell the agent: "Resume run ${runId} of ${workflowName}, starting from step ${currentStep?.id || 'next pending step'}."`);
+  console.log('');
+  console.log('  Check status:');
+  console.log(chalk.cyan(`    agentfile status ${workflowName}`));
+  console.log('');
 };
-
-function findStateFile(workflowPath, runId) {
-  const outputsDir = path.join(workflowPath, 'outputs');
-  if (!fs.existsSync(outputsDir)) return null;
-  if (runId) {
-    const f = path.join(outputsDir, runId, 'execution-state.json');
-    return fs.existsSync(f) ? f : null;
-  }
-  const candidates = [];
-  for (const entry of fs.readdirSync(outputsDir)) {
-    const f = path.join(outputsDir, entry, 'execution-state.json');
-    if (fs.existsSync(f)) candidates.push(f);
-  }
-  // Return most recent non-completed run
-  return candidates.sort().reverse().find(f => {
-    try {
-      const s = JSON.parse(fs.readFileSync(f, 'utf8'));
-      return s.status !== 'completed';
-    } catch { return false; }
-  }) || null;
-}

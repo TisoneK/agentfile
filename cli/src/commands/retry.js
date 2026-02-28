@@ -1,9 +1,9 @@
 'use strict';
 
-const fs    = require('fs');
 const path  = require('path');
 const chalk = require('chalk');
-const { log, findProjectRoot, findWorkflow } = require('../lib/utils');
+const fileOps = require('../../../src/js-utils/file-ops');
+const { log, findProjectRoot, findWorkflow, findStateFile } = require('../lib/utils');
 
 module.exports = async function retry(workflowName, stepId, opts) {
   const projectRoot = findProjectRoot();
@@ -12,13 +12,18 @@ module.exports = async function retry(workflowName, stepId, opts) {
   const workflow = findWorkflow(projectRoot, workflowName);
   if (!workflow) { log.error(`Workflow "${workflowName}" not found.`); process.exit(1); }
 
-  const stateFile = findStateFile(workflow.path, opts.run);
+  const stateFile = findStateFile(workflow.path, opts.run, { anyStatus: true });
   if (!stateFile) {
     log.error(`No execution state found for "${workflowName}".`);
     process.exit(1);
   }
 
-  const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  const readResult = fileOps.readFile(stateFile);
+  if (!readResult.success) {
+    log.error(`Failed to read state file: ${readResult.error.message}`);
+    process.exit(1);
+  }
+  const state = JSON.parse(readResult.content);
   const step  = state.steps.find(s => s.id === stepId);
 
   if (!step) {
@@ -42,25 +47,14 @@ module.exports = async function retry(workflowName, stepId, opts) {
 
   state.status     = 'running';
   state.updated_at = new Date().toISOString();
-  fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf8');
+  const writeResult = fileOps.writeFile(stateFile, JSON.stringify(state, null, 2));
+  if (!writeResult.success) {
+    log.error(`Failed to write state file: ${writeResult.error.message}`);
+    process.exit(1);
+  }
 
   log.success(`Step "${stepId}" (and all subsequent steps) reset to pending.`);
   console.log('');
   log.info(`Resume: ${chalk.cyan(`agentfile resume ${workflowName}`)}`);
   console.log('');
 };
-
-function findStateFile(workflowPath, runId) {
-  const outputsDir = path.join(workflowPath, 'outputs');
-  if (!fs.existsSync(outputsDir)) return null;
-  if (runId) {
-    const f = path.join(outputsDir, runId, 'execution-state.json');
-    return fs.existsSync(f) ? f : null;
-  }
-  const candidates = [];
-  for (const entry of fs.readdirSync(outputsDir)) {
-    const f = path.join(outputsDir, entry, 'execution-state.json');
-    if (fs.existsSync(f)) candidates.push(f);
-  }
-  return candidates.sort().reverse()[0] || null;
-}

@@ -53,8 +53,8 @@ Teach the Reviewer how to systematically validate a complete workflow package fo
 - Is `scripts/ide/instructions.md` present and complete?
 - Is `scripts/ide/steps.md` present with one section per workflow step?
 - Does `steps.md` reference any `utils/` scripts the user needs to run manually?
-- Do `register.sh` and `register.ps1` call `utils/` scripts for file assembly?
 - Do IDE scripts contain **zero** API calls or API key references? (BLOCKING if they do)
+- Are `register.sh` and `register.ps1` absent from `scripts/ide/`? (BLOCKING if present — promotion uses `agentfile promote`)
 
 **README**
 - Does `scripts/README.md` list and describe every script across all three directories (utils/, cli/, ide/)?

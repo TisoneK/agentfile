@@ -1,8 +1,8 @@
 ---
-stepsCompleted: [1, 2, 3, 4]
-inputDocuments: 
-  - "_bmad-output/planning-artifacts/javascript-migration-prd.md"
-  - "_bmad-output/planning-artifacts/architecture.md"
+stepsCompleted: [step-01-validate-prerequisites, step-02-design-epics, step-03-create-stories, step-04-final-validation]
+inputDocuments:
+  - _bmad-output/planning-artifacts/prd.md
+  - _bmad-output/planning-artifacts/architecture.md
 ---
 
 # agentfile - Epic Breakdown
@@ -15,460 +15,982 @@ This document provides the complete epic and story breakdown for agentfile, deco
 
 ### Functional Requirements
 
-**FR1: File Operations Module**
-- Replace shell script file operations (cp, mv, mkdir, rm) with JavaScript equivalents
-- Maintain cross-platform compatibility
-- Provide async/await interface
-- Include comprehensive error handling
-
-**FR2: Template Processing Module**
-- Implement variable substitution engine
-- Support conditional blocks and iteration
-- Handle partial templates and includes
-- Validate template syntax
-
-**FR3: State Management Module**
-- Workflow state persistence
-- Step tracking and history
-- Checkpoint/resume capabilities
-- Rollback functionality
-
-**FR4: CLI Orchestration Module**
-- Command parsing and execution
-- Environment validation
-- Progress tracking
-- Integration with existing workflow.yaml
+FR1: Developers can create new workflows using slash commands
+FR2: Developers can define workflow steps with YAML configuration/bmad-bmm-check-implementation-readiness.md 
+FR3: Developers can execute workflows via slash commands
+FR4: Developers can list all available workflows
+FR5: Developers can view workflow execution status and history
+FR6: The system can execute file operations (copy, move, create, delete)
+FR7: The system can process templates with variable substitution
+FR8: The system can persist workflow state for checkpoint/resume
+FR9: The system can handle errors gracefully with clear messages
+FR10: The system can execute steps sequentially or in parallel
+FR11: The system can configure IDE-native slash commands in supported IDEs
+FR12: The IDE parses /agentfile:run and invokes agentfile CLI for execution
+FR13: The IDE parses /agentfile:create and invokes agentfile CLI for workflow creation
+FR14: The IDE parses /agentfile:list and invokes agentfile CLI to list workflows
+FR15: The system can display workflow results in IDE output
+FR16: Team leads can share workflows via shared repositories
+FR17: Team members can import team-standard workflows
+FR18: Teams can version control their workflows
+FR19: Developers can create custom agents with defined capabilities
+FR20: Developers can create custom skills for reusable logic
+FR21: Developers can extend workflows with custom templates
+FR22: The system can load third-party agents and skills
+FR23: Users can install agentfile via npm
+FR24: Users can get clear error messages when workflows fail
+FR25: Users can debug workflow execution with step-by-step output
+FR26: Users can access documentation from within the IDE
+FR27: Users can configure default workflow execution options
+FR28: Users can set up environment variables for workflows
+FR29: Users can customize output verbosity levels
+FR30: The system can log workflow execution history
+FR31: Users can view past workflow execution results
+FR32: Users can identify which workflows take longest to execute
 
 ### NonFunctional Requirements
 
-**NFR1: Backward Compatibility**
-- Existing Agentfile projects must continue working
-- No breaking changes to workflow.yaml format
-- Gradual migration path supported
-
-**NFR2: Performance**
-- File operations equal or better than shell scripts
-- Minimal overhead for template processing
-- Fast startup times
-
-**NFR3: Cross-Platform Support**
-- Single codebase works on Windows, macOS, Linux
-- No platform-specific dependencies
-- Consistent behavior across OS
-
-**NFR4: Developer Experience**
-- Better error messages than shell scripts
-- Clear debugging information
-- Comprehensive documentation
+NFR1: Workflow Initialization - Workflows should initialize within 2 seconds
+NFR2: File Operations - File operations should match or exceed shell script performance
+NFR3: Cross-Platform Consistency - Behavior should be consistent across Windows, macOS, and Linux
+NFR4: Data Protection - User workflow definitions and configurations should be stored securely
+NFR5: No Sensitive Data Exposure - Error messages should not expose sensitive system information
+NFR6: Safe Execution - Workflow execution should sandbox dangerous operations
+NFR7: User Growth - Support growth from initial users to 500+ projects
+NFR8: Workflow Complexity - Support workflows with 50+ steps without degradation
+NFR9: Team Scale - Support teams with 10+ members sharing workflows
+NFR10: IDE Compatibility - Work with Cursor, Windsurf, and VS Code
+NFR11: Command Response - Slash commands should respond within 500ms
+NFR12: Output Format - Results should display cleanly in IDE output panels
 
 ### Additional Requirements
 
-**From Architecture Document:**
-
-- **Starter Template**: Custom JavaScript utilities approach (NOT oclif, commander, or yargs)
-  - Initialization command: `mkdir -p src/js-utils && npm init -y && npm install --save-dev jest`
-  - Project uses pure JavaScript (Node.js 18+)
-  - No build process required - direct Node.js execution
-  - Jest for unit testing file operations
-  - Code organization: `src/js-utils/file-ops.js`, `template-processor.js`, `state-manager.js`, `cli-orchestrator.js`
-
-- **Migration Strategy**: Big Bang Migration
-  - Complete replacement of shell scripts with JavaScript utilities
-  - No hybrid period - single switchover
-  - No fallback to shell scripts
-
-- **State Persistence**: YAML Files
-  - State files stored in `.agentfile/state/` directory
-  - Each workflow gets `workflow-id.yaml` state file
-  - Includes: step status, timestamps, variables, history
-
-- **Package Distribution**: Bundled with Agentfile
-  - JavaScript utilities included in Agentfile distribution
-  - No npm dependency required
-  - No additional installation steps
-
-- **Error Handling**: Fail-fast with internal recovery mechanisms
-  - Standardized error response structure
-  - Automatic retry for transient failures
-  - Checkpoint/resume for interrupted workflows
-  - Rollback capabilities
-  - Detailed logging for debugging
-
-- **Technical Constraints**:
-  - Must preserve existing Agentfile architecture (agents, workflows, skills, configs)
-  - JavaScript layer is purely mechanical execution, not guidance
-  - Node.js 18+ compatibility required
-  - No external runtime dependencies beyond Node.js
-  - Existing CLI interface (`agentfile` command) must remain unchanged
-  - IDE slash command protocol must continue working
+Architecture Requirements:
+- CLI Interactive Wizard for IDE Selection: The system must include an interactive wizard (using inquirer) that prompts users to select their IDE(s) during initialization
+- .agentfile/ Directory: The system must create and maintain a .agentfile/ directory as the source of truth for all command definitions
+- IDE Wrapper Generation: The system must generate IDE-specific wrapper files for Windsurf, Cursor, KiloCode, GitHub Copilot, and Cline
+- Template System: The system must use static template files from cli/src/templates/ that are copied directly without variable substitution
+- Idempotent Re-run: The system must support idempotent re-runs that merge/preserve existing configurations and add missing IDE wrappers
+- File Operations: The system must use existing src/js-utils/file-ops.js for file operations
+- CWD Resolution: The system must default to current working directory for agentfile init
 
 ### FR Coverage Map
 
-| FR | Requirement | Epic |
-|----|-------------|------|
-| FR1 | File Operations Module | Epic 2: Core File Operations |
-| FR2 | Template Processing Module | Epic 3: Template Processing Engine |
-| FR3 | State Management Module | Epic 4: Workflow State Management |
-| FR4 | CLI Orchestration Module | Epic 5: CLI Integration |
+FR1: Epic 1 - Create workflows using slash commands
+FR2: Epic 1 - Define workflow steps with YAML configuration
+FR3: Epic 1 - Execute workflows via slash commands
+FR4: Epic 1 - List all available workflows
+FR5: Epic 1 - View workflow execution status and history
+FR6: Epic 2 - Execute file operations
+FR7: Epic 2 - Process templates with variable substitution
+FR8: Epic 2 - Persist workflow state for checkpoint/resume
+FR9: Epic 2 - Handle errors gracefully with clear messages
+FR10: Epic 2 - Execute steps sequentially or in parallel
+FR11: Epic 3 - Configure IDE-native slash commands
+FR12: Epic 3 - IDE parses /agentfile:run, invokes CLI
+FR13: Epic 3 - IDE parses /agentfile:create, invokes CLI
+FR14: Epic 3 - IDE parses /agentfile:list, invokes CLI
+FR15: Epic 3 - Display workflow results in IDE output
+FR16: Epic 4 - Share workflows via shared repositories
+FR17: Epic 4 - Import team-standard workflows
+FR18: Epic 4 - Version control workflows
+FR19: Epic 5 - Create custom agents with defined capabilities
+FR20: Epic 5 - Create custom skills for reusable logic
+FR21: Epic 5 - Extend workflows with custom templates
+FR22: Epic 5 - Load third-party agents and skills
+FR23: Epic 6 - Install agentfile via npm
+FR24: Epic 6 - Get clear error messages when workflows fail
+FR25: Epic 6 - Debug workflow execution with step-by-step output
+FR26: Epic 6 - Access documentation from within the IDE
+FR27: Epic 6 - Configure default workflow execution options
+FR28: Epic 6 - Set up environment variables for workflows
+FR29: Epic 6 - Customize output verbosity levels
+FR30: Epic 6 - Log workflow execution history
+FR31: Epic 6 - View past workflow execution results
+FR32: Epic 6 - Identify which workflows take longest to execute
 
 ## Epic List
 
-### Epic 1: Project Foundation & Setup
-Set up Node.js project structure with JavaScript utilities foundation. Initialize the src/js-utils directory with package.json and Jest testing framework.
-**FRs covered:** None (prerequisite)
+### Epic 1: Core Workflow Management
+Developers can create, define, execute, list, and monitor workflows using intuitive slash commands.
+**FRs covered:** FR1, FR2, FR3, FR4, FR5
 
-### Epic 2: Core File Operations
-Replace shell script file operations (cp, mv, mkdir, rm) with JavaScript equivalents that work cross-platform with async/await interface.
-**FRs covered:** FR1
+### Epic 2: Workflow Execution Engine
+The system provides a powerful execution engine with file operations, template processing, state persistence, error handling, and parallel execution support.
+**FRs covered:** FR6, FR7, FR8, FR9, FR10
 
-### Epic 3: Template Processing Engine
-Implement variable substitution engine with conditional blocks, iteration, partial templates, and syntax validation.
-**FRs covered:** FR2
+### Epic 3: IDE Integration
+Slash commands work seamlessly in supported IDEs (Cursor, Windsurf, VS Code) through native IDE configuration. The IDE handles command parsing and invokes agentfile CLI for workflow execution.
+**FRs covered:** FR11, FR12, FR13, FR14, FR15
 
-### Epic 4: Workflow State Management
-Implement workflow state persistence, step tracking, checkpoint/resume capabilities, and rollback functionality.
-**FRs covered:** FR3
+### Epic 4: Team Workflow Sharing
+Teams can share, import, and version-control standardized workflows across their organization.
+**FRs covered:** FR16, FR17, FR18
 
-### Epic 5: CLI Integration
-Implement command parsing, environment validation, progress tracking, and integration with existing workflow.yaml.
-**FRs covered:** FR4
+### Epic 5: Extensibility System
+Developers can create custom agents, skills, and templates, and load third-party extensions.
+**FRs covered:** FR19, FR20, FR21, FR22
 
----
+### Epic 6: Developer Experience & Observability
+Users have an excellent developer experience with npm installation, clear error messages, debugging tools, documentation access, configuration options, and execution logging.
+**FRs covered:** FR23, FR24, FR25, FR26, FR27, FR28, FR29, FR30, FR31, FR32
 
-## Epic 1: Project Foundation & Setup
-
-Set up Node.js project structure with JavaScript utilities foundation. Initialize the src/js-utils directory with package.json and Jest testing framework.
-
-### Story 1.1: Initialize Node.js Project Structure
-
-As a Developer,
-I want to initialize a Node.js project with package.json and Jest testing framework,
-So that I can start developing JavaScript utilities with proper testing infrastructure.
-
-**Acceptance Criteria:**
-
-**Given** A clean directory without Node.js project files
-**When** I run the initialization command
-**Then** package.json is created with name, version, and test script
-**And** jest is installed as dev dependency
-**And** src/js-utils directory is created
-
-### Story 1.2: Configure Project Directory Structure
-
-As a Developer,
-I want the proper directory structure for all utility modules,
-So that I can organize code according to architecture specifications.
-
-**Acceptance Criteria:**
-
-**Given** Initialized Node.js project
-**When** I create the directory structure
-**Then** src/js-utils/ directory exists
-**And** Compatibility layer directory is created
-**And** .agentfile/state/ directory is created for state persistence
-
-### Story 1.3: Set Up Basic Testing Infrastructure
-
-As a Developer,
-I want Jest configured for unit testing,
-So that I can write and run tests for all utility modules.
-
-**Acceptance Criteria:**
-
-**Given** Node.js project with Jest installed
-**When** I configure Jest
-**Then** jest.config.js exists with appropriate settings
-**And** A sample test can be executed successfully
-**And** Test output is clear and readable
+### Epic 7: IDE Setup & Configuration
+The agentfile CLI provides an interactive wizard for IDE selection, generates IDE-specific wrapper files, and maintains a template system with idempotent re-run support.
+**Architecture Requirements covered:** CLI Wizard, .agentfile/ Directory, IDE Wrapper Generation, Template System, Idempotent Re-run, File Operations, CWD Resolution
 
 ---
 
-## Epic 2: Core File Operations
+## Epic 1: Core Workflow Management
 
-Replace shell script file operations (cp, mv, mkdir, rm) with JavaScript equivalents that work cross-platform with async/await interface.
+Developers can create, define, execute, list, and monitor workflows using intuitive slash commands.
 
-### Story 2.1: Implement File Copy Operation
+### Story 1.1: Create New Workflow via Slash Command
 
-As a Developer,
-I want to copy files using JavaScript instead of shell scripts,
-So that file operations work consistently across Windows, macOS, and Linux.
-
-**Acceptance Criteria:**
-
-**Given** Source and destination file paths
-**When** I call the copy function
-**Then** Source file is duplicated at destination
-**And** Original file remains unchanged
-**And** Function returns success result
-**And** Works across Windows, macOS, Linux
-
-### Story 2.2: Implement File Move Operation
-
-As a Developer,
-I want to move files using JavaScript instead of shell scripts,
-So that I can relocate files while maintaining cross-platform compatibility.
+As a developer,
+I want to create a new workflow using the /agentfile:create slash command,
+So that I can quickly set up automation for my development tasks.
 
 **Acceptance Criteria:**
 
-**Given** Source and destination file paths
-**When** I call the move function
-**Then** File is relocated to destination
-**And** Original file no longer exists at source
-**And** Function returns success result
+**Given** the agentfile CLI is installed and integrated with the IDE
+**When** I type /agentfile:create followed by a workflow name and description
+**Then** a new workflow file is created in the workflows/ directory
+**And** the workflow is immediately available for execution
 
-### Story 2.3: Implement Directory Create Operation
-
-As a Developer,
-I want to create directories using JavaScript instead of shell scripts,
-So that directory creation works consistently across platforms.
-
-**Acceptance Criteria:**
-
-**Given** Directory path to create
-**When** I call the mkdir function
-**Then** Directory is created at specified path
-**And** Parent directories are created if they don't exist
-**And** Function returns success result
-
-### Story 2.4: Implement File Delete Operation
-
-As a Developer,
-I want to delete files using JavaScript instead of shell scripts,
-So that file deletion works consistently across platforms.
-
-**Acceptance Criteria:**
-
-**Given** File path to delete
-**When** I call the delete function
-**Then** File is removed from filesystem
-**And** Function returns success result
-**And** Error is returned if file doesn't exist
-
-### Story 2.5: Add Comprehensive Error Handling
-
-As a Developer,
-I want consistent error handling across all file operations,
-So that failures are properly reported with actionable messages.
-
-**Acceptance Criteria:**
-
-**Given** Any file operation that fails
-**When** Operation encounters an error
-**Then** Error object contains success: false
-**And** Error includes standardized error code
-**And** Error includes human-readable message
-**And** Error includes operation context details
+**Given** the agentfile CLI is installed and integrated with the IDE
+**When** I type /agentfile:create without arguments
+**Then** I am prompted to enter a workflow name and description interactively
 
 ---
 
-## Epic 3: Template Processing Engine
+### Story 1.2: Define Workflow Steps with YAML
 
-Implement variable substitution engine with conditional blocks, iteration, partial templates, and syntax validation.
-
-### Story 3.1: Implement Basic Variable Substitution
-
-As a Developer,
-I want to replace {{variable}} placeholders in templates,
-So that I can dynamically generate files from templates.
+As a developer,
+I want to define workflow steps using YAML configuration,
+So that I can specify the exact actions and order of execution for my workflow.
 
 **Acceptance Criteria:**
 
-**Given** A template with {{variable}} placeholders and context data
-**When** I call the template processor
-**Then** All placeholders are replaced with corresponding values
-**And** Undefined variables result in empty strings
-**And** Function returns processed template string
+**Given** a new workflow has been created
+**When** I edit the workflow.yaml file and add steps with name, action, and parameters
+**Then** the workflow parser validates the YAML structure
+**And** the steps are stored for later execution
 
-### Story 3.2: Add Conditional Block Support
-
-As a Developer,
-I want to use {{#if}} / {{/if}} blocks in templates,
-So that I can conditionally include or exclude content.
-
-**Acceptance Criteria:**
-
-**Given** A template with {{#if condition}} blocks
-**When** I process the template
-**Then** Content inside true conditions is included
-**And** Content inside false conditions is excluded
-**And** Nested conditions work correctly
-
-### Story 3.3: Add Iteration Support
-
-As a Developer,
-I want to use {{#each}} / {{/each}} loops in templates,
-So that I can repeat content for each item in a collection.
-
-**Acceptance Criteria:**
-
-**Given** A template with {{#each items}} loop and array data
-**When** I process the template
-**Then** Content is repeated for each item in the array
-**And** Each iteration has access to item data
-**And** Nested loops work correctly
-
-### Story 3.4: Implement Partial Templates
-
-As a Developer,
-I want to include partial templates within other templates,
-So that I can reuse common template components.
-
-**Acceptance Criteria:**
-
-**Given** A main template that includes a partial
-**When** I process the template
-**Then** Partial content is inserted at include location
-**And** Partials can access parent context
-**And** Nested partials work correctly
-
-### Story 3.5: Add Template Syntax Validation
-
-As a Developer,
-I want to validate template syntax before processing,
-So that errors are caught early with clear messages.
-
-**Acceptance Criteria:**
-
-**Given** A template with syntax errors
-**When** I call validate on the template
-**Then** Validation returns list of errors with line numbers
-**And** Errors include human-readable descriptions
-**And** Valid templates return success
+**Given** an invalid YAML structure
+**When** I try to save the workflow
+**Then** I receive a clear error message explaining the validation failure
 
 ---
 
-## Epic 4: Workflow State Management
+### Story 1.3: Execute Workflow via Slash Command
 
-Implement workflow state persistence, step tracking, checkpoint/resume capabilities, and rollback functionality.
-
-### Story 4.1: Implement Workflow State Persistence
-
-As a Developer,
-I want workflow state saved to YAML files,
-So that state persists across sessions.
+As a developer,
+I want to execute a workflow using the /agentfile:run slash command,
+So that I can automate my development tasks with a single command.
 
 **Acceptance Criteria:**
 
-**Given** A workflow with current state
-**When** I save the state
-**Then** State is written to .agentfile/state/[workflow-id].yaml
-**And** File is human-readable YAML format
-**And** State can be loaded back successfully
+**Given** a valid workflow exists with at least one step
+**When** I type /agentfile:run followed by the workflow name
+**Then** the workflow executes each step in sequence
+**And** the results are displayed in the IDE output
 
-### Story 4.2: Implement Step Tracking
-
-As a Developer,
-I want to track which workflow steps have been completed,
-So that I know the current progress.
-
-**Acceptance Criteria:**
-
-**Given** A running workflow
-**When** A step completes
-**Then** Step is marked as complete in state
-**And** Timestamp is recorded for each step
-**And** Step history is maintained
-
-### Story 4.3: Add Checkpoint/Resume Capabilities
-
-As a Developer,
-I want to save checkpoints and resume from them,
-So that I can recover from failures without restarting.
-
-**Acceptance Criteria:**
-
-**Given** A workflow at a specific point
-**When** I create a checkpoint
-**Then** Complete state is saved
-**And** I can resume from that checkpoint later
-**And** All variables and progress are restored
-
-### Story 4.4: Implement Rollback Functionality
-
-As a Developer,
-I want to rollback to a previous state on failure,
-So that I can recover from errors gracefully.
-
-**Acceptance Criteria:**
-
-**Given** A workflow that has failed
-**When** I trigger rollback
-**Then** State reverts to last known good state
-**And** Changes made by failed steps are undone
-**And** Rollback status is reported clearly
+**Given** a workflow with multiple steps
+**When** I execute the workflow
+**Then** each step executes sequentially by default
+**And** I can see progress for each step as it completes
 
 ---
 
-## Epic 5: CLI Integration
+### Story 1.4: List All Available Workflows
 
-Implement command parsing, environment validation, progress tracking, and integration with existing workflow.yaml.
-
-### Story 5.1: Implement Command Parsing
-
-As a Developer,
-I want agentfile CLI commands to be parsed,
-So that user commands are executed correctly.
+As a developer,
+I want to list all available workflows using the /agentfile:list slash command,
+So that I can see what workflows are available in my project.
 
 **Acceptance Criteria:**
 
-**Given** User runs agentfile command with arguments
-**When** CLI parses the command
-**Then** Command and arguments are correctly identified
-**And** Options are properly extracted
-**And** Invalid commands return helpful error
+**Given** workflows exist in the project
+**When** I type /agentfile:list
+**Then** I see a list of all workflow names and their descriptions
+**And** I can quickly identify which workflows are available
 
-### Story 5.2: Add Environment Validation
+**Given** no workflows exist in the project
+**When** I type /agentfile:list
+**Then** I see a message indicating no workflows are available
+**And** I am prompted to create a new workflow
 
-As a Developer,
-I want environment to be validated before execution,
-So that missing requirements are caught early.
+---
 
-**Acceptance Criteria:**
+### Story 1.5: View Workflow Execution Status and History
 
-**Given** User runs agentfile command
-**When** Environment is checked
-**Then** Node.js version is validated (18+)
-**And** Required directories exist
-**And** Clear error if requirements not met
-
-### Story 5.3: Implement Progress Tracking
-
-As a Developer,
-I want to see workflow execution progress,
-So that I know what's happening during execution.
+As a developer,
+I want to view the execution status and history of workflows,
+So that I can monitor progress and review past executions.
 
 **Acceptance Criteria:**
 
-**Given** A running workflow
-**When** Steps are executing
-**Then** Current step is displayed
-**And** Progress percentage is shown
-**And** Step completion is indicated
+**Given** a workflow has been executed
+**When** I request execution history
+**Then** I see a list of past executions with timestamps
+**And** each entry shows success/failure status
 
-### Story 5.4: Integrate with workflow.yaml
+**Given** a workflow is currently executing
+**When** I check the status
+**Then** I see the current step being executed
+**And** I see progress information (e.g., step 2 of 5)
 
-As a Developer,
-I want JavaScript utilities to read and execute workflow.yaml,
-So that existing workflows continue to work.
+---
 
-**Acceptance Criteria:**
+## Epic 2: Workflow Execution Engine
 
-**Given** A valid workflow.yaml file
-**When** I run a workflow
-**Then** All steps are read from YAML
-**And** Steps are executed in order
-**And** Step outputs are captured
+The system provides a powerful execution engine with file operations, template processing, state persistence, error handling, and parallel execution support.
 
-### Story 5.5: Maintain Backward Compatibility
+### Story 2.1: Execute File Operations
 
-As a Developer,
-I want existing Agentfile projects to work unchanged,
-So that users don't need to modify their workflows.
+As a developer,
+I want my workflow to perform file operations like copy, move, create, and delete,
+So that I can automate file management tasks.
 
 **Acceptance Criteria:**
 
-**Given** An existing Agentfile project with shell scripts
-**When** I run with JavaScript utilities
-**Then** All workflows execute correctly
-**And** workflow.yaml format is unchanged
-**And** Agent/skill file structure is unchanged
+**Given** a workflow step with file operation type "copy"
+**When** the step executes
+**Then** the source file is copied to the destination path
+**And** the operation completes without errors for valid paths
+
+**Given** a workflow step with file operation type "create"
+**When** the step executes
+**Then** a new file is created at the specified path
+**And** any necessary parent directories are created automatically
+
+**Given** an invalid source or destination path
+**When** the file operation executes
+**Then** the workflow fails with a clear error message
+
+---
+
+### Story 2.2: Process Templates with Variable Substitution
+
+As a developer,
+I want my workflow to process templates with variable substitution,
+So that I can create dynamic content based on context.
+
+**Acceptance Criteria:**
+
+**Given** a template file with {{variable}} placeholders
+**When** the template processing step executes
+**Then** all placeholders are replaced with actual values
+**And** the processed content is written to the output file
+
+**Given** a template with missing variable values
+**When** the template processing executes
+**Then** the workflow fails with a clear error indicating the missing variable
+
+**Given** a template with nested variable references
+**When** the template processes
+**Then** all nested references are resolved correctly
+
+---
+
+### Story 2.3: Persist Workflow State for Checkpoint/Resume
+
+As a developer,
+I want my workflow to persist state so it can be resumed after interruption,
+So that long-running workflows are not lost if something fails.
+
+**Acceptance Criteria:**
+
+**Given** a workflow is executing
+**When** the workflow completes a step
+**Then** the current state is saved to persistent storage
+**And** the workflow can be resumed from this checkpoint
+
+**Given** a workflow was interrupted
+**When** I run the same workflow again with a resume flag
+**Then** the workflow continues from the last successful step
+**And** previously completed steps are skipped
+
+**Given** a workflow completes all steps
+**When** execution finishes
+**Then** the checkpoint data is cleaned up
+**And** the workflow can run fresh on next execution
+
+---
+
+### Story 2.4: Handle Errors Gracefully with Clear Messages
+
+As a developer,
+I want my workflow to handle errors gracefully with clear messages,
+So that I can quickly identify and fix issues.
+
+**Acceptance Criteria:**
+
+**Given** a workflow step fails
+**When** the error occurs
+**Then** the workflow stops execution
+**And** a clear error message explains what failed and why
+
+**Given** a workflow fails
+**When** the error is displayed
+**Then** the error message does not expose sensitive system information
+**And** the user is given actionable guidance on how to fix the issue
+
+**Given** a workflow has error handling configured
+**When** a step fails
+**Then** the configured error handler is invoked
+**And** the workflow can either retry, skip, or abort based on configuration
+
+---
+
+### Story 2.5: Execute Steps Sequentially or In Parallel
+
+As a developer,
+I want my workflow to support both sequential and parallel step execution,
+So that I can optimize workflow performance based on task dependencies.
+
+**Acceptance Criteria:**
+
+**Given** a workflow with sequential steps (default)
+**When** the workflow executes
+**Then** each step completes before the next one starts
+**And** the final result is the same as the sequential order
+
+**Given** a workflow with parallel steps marked
+**When** the workflow executes
+**Then** independent steps run concurrently
+**And** the workflow waits for all parallel steps to complete before continuing
+
+**Given** parallel steps with dependencies
+**When** the workflow executes
+**Then** steps wait for their dependencies to complete
+**And** the execution respects the dependency graph
+
+---
+
+## Epic 3: IDE Integration
+
+Slash commands work seamlessly in supported IDEs (Cursor, Windsurf, VS Code) through native IDE configuration. The IDE handles command parsing and invokes agentfile CLI for workflow execution.
+
+### Story 3.1: Configure IDE-Native Slash Commands
+
+As a developer,
+I want agentfile slash commands to be natively available in my IDE,
+So that I can access workflow functionality directly from the command line.
+
+**Acceptance Criteria:**
+
+**Given** the agentfile init command has been run
+**When** I open my IDE
+**Then** the slash commands (/agentfile:run, /agentfile:create, /agentfile:list) are available
+**And** they respond to invocation
+
+**Given** multiple IDEs are configured
+**When** I use each IDE
+**Then** the slash commands work consistently across all supported IDEs
+**And** the behavior is uniform
+
+---
+
+### Story 3.2: IDE Invokes agentfile CLI for /agentfile:run
+
+As a developer,
+I want to execute workflows using /agentfile:run,
+So that I can quickly run my automated tasks.
+
+**Acceptance Criteria:**
+
+**Given** /agentfile:run is invoked with a valid workflow name
+**When** the command is parsed
+**Then** the specified workflow is executed
+**And** results are displayed in the IDE output
+
+**Given** /agentfile:run is invoked with an invalid workflow name
+**When** the command is parsed
+**Then** an error message lists available workflows
+**And** the user is guided to use /agentfile:list
+
+**Given** /agentfile:run is invoked with additional arguments
+**When** the command is parsed
+**Then** arguments are passed to the workflow as variables
+**And** the workflow can use these at runtime
+
+---
+
+### Story 3.3: IDE Invokes agentfile CLI for /agentfile:create
+
+As a developer,
+I want to create new workflows using /agentfile:create,
+So that I can quickly set up new automation tasks.
+
+**Acceptance Criteria:**
+
+**Given** /agentfile:create is invoked with a workflow name
+**When** the command is parsed
+**Then** a new workflow file is scaffolded
+**And** the user can immediately edit the workflow
+
+**Given** /agentfile:create is invoked without arguments
+**When** the command is parsed
+**Then** an interactive wizard guides the user through workflow creation
+
+**Given** /agentfile:create is invoked with a name that already exists
+**When** the command is parsed
+**Then** the user is prompted to either overwrite or choose a different name
+
+---
+
+### Story 3.4: IDE Invokes agentfile CLI for /agentfile:list
+
+As a developer,
+I want to list all available workflows using /agentfile:list,
+So that I can see what automation is available.
+
+**Acceptance Criteria:**
+
+**Given** /agentfile:list is invoked
+**When** the command is parsed
+**Then** all workflows in the project are displayed
+**And** each entry shows name, description, and last execution time
+
+**Given** /agentfile:list is invoked with a filter argument
+**When** the command is parsed
+**Then** only workflows matching the filter are displayed
+
+**Given** no workflows exist
+**When** /agentfile:list is invoked
+**Then** a helpful message is displayed
+**And** the user is directed to /agentfile:create
+
+---
+
+### Story 3.5: Display Workflow Results in IDE Output
+
+As a developer,
+I want workflow execution results displayed in the IDE output panel,
+So that I can see the results of my automated tasks.
+
+**Acceptance Criteria:**
+
+**Given** a workflow executes successfully
+**When** execution completes
+**Then** success output is displayed in the IDE output panel
+**And** the output is formatted for readability
+
+**Given** a workflow fails
+**When** execution stops
+**Then** error details are displayed in the IDE output panel
+**And** the error message is clear and actionable
+
+**Given** a long-running workflow
+**When** steps are executing
+**Then** progress updates appear in real-time
+**And** the user can see which step is currently running
+
+---
+
+## Epic 4: Team Workflow Sharing
+
+Teams can share, import, and version-control standardized workflows across their organization.
+
+### Story 4.1: Share Workflows via Shared Repositories
+
+As a team lead,
+I want to share workflows via shared repositories,
+So that my team can access standardized automation.
+
+**Acceptance Criteria:**
+
+**Given** a workflow exists in a local project
+**When** I export the workflow to a shared location
+**Then** the workflow files are saved to the shared repository
+**And** the workflow can be imported by team members
+
+**Given** a workflow is updated in the shared repository
+**When** team members sync their local projects
+**Then** they receive the latest version of the workflow
+
+---
+
+### Story 4.2: Import Team-Standard Workflows
+
+As a team member,
+I want to import team-standard workflows into my project,
+So that I can use the team's standardized automation.
+
+**Acceptance Criteria:**
+
+**Given** a shared workflow repository is configured
+**When** I run the import command
+**Then** all available team workflows are listed
+**And** I can select which ones to import
+
+**Given** a specific workflow name to import
+**When** I run the import command with the workflow name
+**Then** only that workflow is imported
+**And** it is immediately available in my project
+
+---
+
+### Story 4.3: Version Control Workflows
+
+As a developer,
+I want my workflows to be version controlled,
+So that I can track changes and collaborate with others.
+
+**Acceptance Criteria:**
+
+**Given** a workflow is created
+**When** the project uses git
+**Then** the workflow file is tracked by version control
+**And** changes can be committed and reviewed
+
+**Given** multiple team members edit the same workflow
+**When** they merge their changes
+**Then** the workflow history shows all changes
+**And** conflicts can be resolved using standard git workflows
+
+---
+
+## Epic 5: Extensibility System
+
+Developers can create custom agents, skills, and templates, and load third-party extensions.
+
+### Story 5.1: Create Custom Agents with Defined Capabilities
+
+As a developer,
+I want to create custom agents with defined capabilities,
+So that I can extend agentfile with specialized functionality.
+
+**Acceptance Capabilities:**
+
+**Given** I want to create a custom agent
+**When** I define an agent configuration file
+**Then** the agent is loaded by agentfile
+**And** it can be used in workflows
+
+**Given** a custom agent with specific capabilities
+**When** a workflow references that agent
+**Then** the agent performs its defined actions
+**And** the results are integrated into the workflow
+
+---
+
+### Story 5.2: Create Custom Skills for Reusable Logic
+
+As a developer,
+I want to create custom skills for reusable logic,
+So that I can encapsulate common patterns and share them across workflows.
+
+**Acceptance Criteria:**
+
+**Given** I want to create a custom skill
+**When** I define a skill configuration file
+**Then** the skill is registered with agentfile
+**And** it can be invoked from any workflow
+
+**Given** a custom skill is defined
+**When** a workflow calls that skill
+**Then** the skill executes its logic
+**And** returns results to the workflow
+
+---
+
+### Story 5.3: Extend Workflows with Custom Templates
+
+As a developer,
+I want to extend workflows with custom templates,
+So that I can create reusable workflow patterns.
+
+**Acceptance Criteria:**
+
+**Given** I want to create a custom template
+**When** I save a workflow as a template
+**Then** the template is available for future workflow creation
+**And** new workflows can be based on this template
+
+**Given** a template with variables
+**When** I create a new workflow from the template
+**Then** I am prompted to fill in the variable values
+**And** a customized workflow is generated
+
+---
+
+### Story 5.4: Load Third-Party Agents and Skills
+
+As a developer,
+I want to load third-party agents and skills,
+So that I can use community-built extensions.
+
+**Acceptance Criteria:**
+
+**Given** a third-party agent or skill package
+**When** I install it via npm
+**Then** agentfile automatically discovers and loads it
+**And** it is available for use in workflows
+
+**Given** a third-party extension is loaded
+**When** I use it in a workflow
+**Then** it functions the same as built-in agents and skills
+**And** documentation from the package is accessible
+
+---
+
+## Epic 6: Developer Experience & Observability
+
+Users have an excellent developer experience with npm installation, clear error messages, debugging tools, documentation access, configuration options, and execution logging.
+
+### Story 6.1: Install agentfile via npm
+
+As a developer,
+I want to install agentfile via npm,
+So that I can quickly get started with the tool.
+
+**Acceptance Criteria:**
+
+**Given** Node.js 18+ is installed
+**When** I run npm install -g agentfile
+**Then** the agentfile CLI is installed globally
+**And** the agentfile command is available in my terminal
+
+**Given** agentfile is installed
+**When** I run agentfile --version
+**Then** the version number is displayed
+**And** the installation is confirmed
+
+---
+
+### Story 6.2: Get Clear Error Messages When Workflows Fail
+
+As a developer,
+I want clear error messages when workflows fail,
+So that I can quickly identify and fix issues.
+
+**Acceptance Criteria:**
+
+**Given** a workflow step fails
+**When** the error occurs
+**Then** a clear message explains what failed
+**And** suggests how to fix the issue
+
+**Given** a workflow fails due to invalid configuration
+**When** the error is displayed
+**Then** the exact line or parameter causing the issue is highlighted
+
+---
+
+### Story 6.3: Debug Workflow Execution with Step-by-Step Output
+
+As a developer,
+I want to debug workflow execution with step-by-step output,
+So that I can identify issues in my workflow logic.
+
+**Acceptance Criteria:**
+
+**Given** a workflow is executed with debug mode enabled
+**When** each step executes
+**Then** detailed output shows exactly what is happening
+**And** variable values are displayed at each step
+
+**Given** a workflow fails in debug mode
+**When** the error occurs
+**Then** the full context at the time of failure is displayed
+
+---
+
+### Story 6.4: Access Documentation from Within the IDE
+
+As a developer,
+I want to access documentation from within the IDE,
+So that I can learn how to use agentfile without leaving my workflow.
+
+**Acceptance Criteria:**
+
+**Given** I am using the IDE with agentfile integrated
+**When** I invoke the help command
+**Then** documentation is displayed in the IDE
+**And** I can quickly reference workflow syntax and examples
+
+**Given** I want help on a specific command
+**When** I invoke help with the command name
+**Then** specific documentation for that command is shown
+
+---
+
+### Story 6.5: Configure Default Workflow Execution Options
+
+As a developer,
+I want to configure default workflow execution options,
+So that I don't have to specify them every time.
+
+**Acceptance Criteria:**
+
+**Given** I want to set default execution options
+**When** I create a configuration file
+**Then** the options are applied to all workflow executions
+**And** they can be overridden per execution if needed
+
+**Given** default options are configured
+**When** I run a workflow without specifying options
+**Then** the defaults are used
+**And** I see the applied configuration in the output
+
+---
+
+### Story 6.6: Set Up Environment Variables for Workflows
+
+As a developer,
+I want to set up environment variables for workflows,
+So that I can customize behavior without hardcoding values.
+
+**Acceptance Criteria:**
+
+**Given** I want to configure environment variables
+**When** I create an environment configuration
+**Then** variables are available to all workflow steps
+**And** they can be referenced in templates and commands
+
+**Given** sensitive environment variables
+**When** they are configured
+**Then** they are stored securely
+**And** they are not exposed in logs or error messages
+
+---
+
+### Story 6.7: Customize Output Verbosity Levels
+
+As a developer,
+I want to customize output verbosity levels,
+So that I can see only the information I need.
+
+**Acceptance Criteria:**
+
+**Given** I want minimal output
+**When** I set verbosity to "quiet"
+**Then** only essential information is displayed
+**And** success/failure status is shown
+
+**Given** I want detailed output
+**When** I set verbosity to "verbose"
+**Then** all execution details are displayed
+**And** debugging information is available
+
+---
+
+### Story 6.8: Log Workflow Execution History
+
+As a developer,
+I want to log workflow execution history,
+So that I can maintain a record of what was executed.
+
+**Acceptance Criteria:**
+
+**Given** a workflow executes
+**When** execution completes
+**Then** details are saved to the execution log
+**And** the log includes timestamps, inputs, and outputs
+
+**Given** I want to search past executions
+**When** I query the log
+**Then** I can filter by workflow name, date, or status
+
+---
+
+### Story 6.9: View Past Workflow Execution Results
+
+As a developer,
+I want to view past workflow execution results,
+So that I can review what happened in previous runs.
+
+**Acceptance Criteria:**
+
+**Given** past workflow executions exist
+**When** I request to view past results
+**Then** I see a list of previous executions
+**And** I can select one to view full details
+
+**Given** I want to view a specific execution
+**When** I select it from the history
+**Then** the full output and any errors are displayed
+
+---
+
+### Story 6.10: Identify Which Workflows Take Longest to Execute
+
+As a developer,
+I want to identify which workflows take longest to execute,
+So that I can optimize performance bottlenecks.
+
+**Acceptance Criteria:**
+
+**Given** multiple workflows have been executed
+**When** I view performance metrics
+**Then** I see execution times for each workflow
+**And** the slowest workflows are highlighted
+
+**Given** I want detailed timing information
+**When** I run a workflow in performance mode
+**Then** each step shows its individual execution time
+**And** I can identify which steps are slow
+
+---
+
+## Epic 7: IDE Setup & Configuration
+
+The agentfile CLI provides an interactive wizard for IDE selection, generates IDE-specific wrapper files, and maintains a template system with idempotent re-run support.
+
+### Story 7.1: CLI Interactive Wizard for IDE Selection
+
+As a developer,
+I want an interactive wizard to guide IDE selection,
+So that I can easily set up agentfile for my preferred IDE.
+
+**Acceptance Criteria:**
+
+**Given** I run agentfile init
+**When** no IDE is specified
+**Then** an interactive wizard prompts me to select my IDE(s)
+**And** I can choose from supported IDEs (Cursor, Windsurf, VS Code, etc.)
+
+**Given** multiple IDEs are selected
+**When** the wizard completes
+**Then** agentfile is configured for all selected IDEs
+
+---
+
+### Story 7.2: Create and Populate .agentfile/ Directory
+
+As a developer,
+I want agentfile to create a .agentfile/ directory as the source of truth,
+So that all IDE configurations reference a central location.
+
+**Acceptance Criteria:**
+
+**Given** agentfile init runs for the first time
+**When** initialization completes
+**Then** a .agentfile/ directory is created
+**And** command definition files are copied to it
+
+**Given** .agentfile/ already exists
+**When** agentfile init runs again
+**Then** existing contents are preserved
+**And** only new files are added
+
+---
+
+### Story 7.3: Generate IDE-Specific Wrapper Files
+
+As a developer,
+I want agentfile to generate IDE-specific wrapper files,
+So that each IDE can invoke agentfile commands correctly.
+
+**Acceptance Criteria:**
+
+**Given** IDE selection during init
+**When** initialization completes
+**Then** IDE-specific wrapper files are generated
+**And** they reference the .agentfile/ directory
+
+**Given** Windsurf is selected
+**When** init runs
+**Then** .windsurf/workflows/*.md files are created
+
+**Given** Cursor is selected
+**When** init runs
+**Then** .cursor/ configuration files are created
+
+**Given** other IDEs are selected
+**When** init runs
+**Then** the appropriate configuration files are created
+
+---
+
+### Story 7.4: Implement Template System for Static File Copying
+
+As a developer,
+I want agentfile to use a template system that copies files as-is,
+So that I can customize the command definitions.
+
+**Acceptance Criteria:**
+
+**Given** template files exist in cli/src/templates/
+**When** agentfile init runs
+**Then** templates are copied directly without modification
+**And** they become the .agentfile/ contents
+
+**Given** I want to customize command definitions
+**When** I edit files in .agentfile/
+**Then** my changes take precedence over defaults
+
+---
+
+### Story 7.5: Implement Idempotent Re-Run Logic
+
+As a developer,
+I want agentfile init to be idempotent,
+So that I can run it multiple times without breaking existing setup.
+
+**Acceptance Criteria:**
+
+**Given** agentfile has been initialized
+**When** I run agentfile init again
+**Then** existing configurations are preserved
+**And** missing IDE wrappers are added
+
+**Given** I have customized IDE configurations
+**When** agentfile init runs
+**Then** my customizations are never overwritten
+**And** only missing files are created
+
+---
+
+### Story 7.6: Implement File Operations Using js-utils
+
+As a developer,
+I want agentfile to use the existing file-ops utility,
+So that file operations are consistent and reliable.
+
+**Acceptance Criteria:**
+
+**Given** file operations are needed during init
+**When** the init command executes
+**Then** src/js-utils/file-ops.js is used
+**And** all file operations use async/await
+
+---
+
+### Story 7.7: Implement CWD Resolution for agentfile init
+
+As a developer,
+I want agentfile init to default to the current working directory,
+So that I can initialize in the right location easily.
+
+**Acceptance Criteria:**
+
+**Given** I run agentfile init without arguments
+**When** the command executes
+**Then** the current working directory is used
+
+**Given** I run agentfile init with "."
+**When** the command executes
+**Then** the current working directory is used
+
+**Given** I run agentfile init --here
+**When** the command executes
+**Then** the current working directory is used
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

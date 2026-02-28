@@ -1,0 +1,31 @@
+---
+name: project-template-creation
+description: Create reusable project templates with agentfile integration
+web_bundle: true
+createWorkflow: './steps-c/step-01-config.md'
+---
+
+# Project Template Creation Workflow
+
+**Goal:** Create reusable project templates with agentfile integration
+
+**Description:** Generates project templates that include clean agentfile installation for consistent project setup
+
+**Primary Agent:** Alex (Setup Specialist)
+
+## Workflow Steps
+
+| Step | Name | Goal |
+|------|------|------|
+| 1 | Template Configuration | Define template structure and options |
+| 2 | Agentfile Integration | Add clean agentfile setup to template |
+| 3 | Customization Options | Configure template variables and settings |
+| 4 | Validation | Test template generation and installation |
+| 5 | Package Template | Create distributable template package |
+
+## Outputs
+
+- Project template files
+- Installation scripts
+- Configuration documentation
+- Template usage guide

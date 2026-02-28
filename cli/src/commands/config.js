@@ -1,42 +1,50 @@
 'use strict';
 
-const fs   = require('fs');
-const path = require('path');
-const os   = require('os');
+const path  = require('path');
+const os    = require('os');
 const chalk = require('chalk');
+const fileOps = require('../../../src/js-utils/file-ops');
 const { log } = require('../lib/utils');
 
-// Config file location
-const CONFIG_DIR = path.join(os.homedir(), '.agentfile');
+// ── config ─────────────────────────────────────────────────────────────────────
+// Lightweight config store for user preferences.
+// Note: The agentfile CLI does not call any LLM API — execution is handled
+// entirely by the IDE agent. Config values here are informational/preference only.
+// ──────────────────────────────────────────────────────────────────────────────
+
+const CONFIG_DIR  = path.join(os.homedir(), '.agentfile');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-// Default config
 const DEFAULT_CONFIG = {
-  apiKey: null,
-  model: 'claude-sonnet-4-6',
-  defaultShell: null, // null = auto-detect
+  defaultEditor: null,  // hint for IDE instructions output (e.g. "cursor", "vscode")
 };
 
-// Load config from file
 function loadConfig() {
   try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      const content = fs.readFileSync(CONFIG_FILE, 'utf8');
-      return { ...DEFAULT_CONFIG, ...JSON.parse(content) };
+    if (fileOps.existsSync(CONFIG_FILE)) {
+      const readResult = fileOps.readFile(CONFIG_FILE);
+      if (readResult.success) {
+        return { ...DEFAULT_CONFIG, ...JSON.parse(readResult.content) };
+      }
     }
-  } catch (err) {
+  } catch {
     log.warn('Config file corrupted, using defaults');
   }
-  return DEFAULT_CONFIG;
+  return { ...DEFAULT_CONFIG };
 }
 
-// Save config to file
 function saveConfig(config) {
   try {
-    if (!fs.existsSync(CONFIG_DIR)) {
-      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    if (!fileOps.existsSync(CONFIG_DIR)) {
+      const dirResult = fileOps.ensureDir(CONFIG_DIR);
+      if (!dirResult.success) {
+        throw new Error(dirResult.error.message);
+      }
     }
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    const writeResult = fileOps.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2) + '\n');
+    if (!writeResult.success) {
+      throw new Error(writeResult.error.message);
+    }
     return true;
   } catch (err) {
     log.error(`Failed to save config: ${err.message}`);
@@ -44,96 +52,106 @@ function saveConfig(config) {
   }
 }
 
-// Show current config
 function showConfig() {
   const config = loadConfig();
-  
+
+  // Check for legacy config values and warn
+  let legacyWarning = null;
+  if (fileOps.existsSync(CONFIG_FILE)) {
+    try {
+      const readResult = fileOps.readFile(CONFIG_FILE);
+      if (readResult.success) {
+        const raw = JSON.parse(readResult.content);
+        if (raw.apiKey || raw.model || raw.defaultShell) {
+          legacyWarning = [];
+          if (raw.apiKey) legacyWarning.push('apiKey');
+          if (raw.model) legacyWarning.push('model');
+          if (raw.defaultShell) legacyWarning.push('defaultShell');
+        }
+      }
+    } catch { /* ignore parse errors, will use defaults */ }
+  }
+
   console.log(chalk.bold('\n  Agentfile Configuration'));
   console.log(chalk.gray(`  Config file: ${CONFIG_FILE}`));
   console.log('');
-  
+
+  if (legacyWarning) {
+    console.log(chalk.yellow('  ⚠ Legacy config values detected (no longer used):'));
+    console.log(chalk.gray(`    ${legacyWarning.join(', ')}`));
+    console.log(chalk.gray('    These are ignored — the CLI no longer calls any LLM API.'));
+    console.log('');
+  }
+
   console.log(chalk.bold('  Settings:'));
-  console.log(`  API Key:    ${config.apiKey ? '***' + config.apiKey.slice(-4) : chalk.red('not set')}`);
-  console.log(`  Model:      ${config.model || chalk.gray('default')}`);
-  console.log(`  Shell:      ${config.defaultShell || chalk.gray('auto-detect')}`);
+  console.log(`  Default editor: ${config.defaultEditor || chalk.gray('not set')}`);
+  console.log('');
+  console.log(chalk.gray('  Note: API keys and model selection are managed by your IDE agent,'));
+  console.log(chalk.gray('  not by the agentfile CLI. The CLI performs no LLM calls.'));
   console.log('');
 }
 
-// Set a config value
 function setConfig(key, value) {
   const config = loadConfig();
-  
   switch (key) {
+    case 'default-editor':
+    case 'defaultEditor':
+      config.defaultEditor = value;
+      break;
     case 'api-key':
     case 'apiKey':
-      config.apiKey = value;
-      break;
+      log.warn('api-key is no longer stored — the CLI does not call any LLM API.');
+      return true;
     case 'model':
-      config.model = value;
-      break;
+      log.warn('model is no longer stored — the CLI does not call any LLM API.');
+      return true;
     case 'shell':
-      if (!['bash', 'pwsh'].includes(value)) {
-        log.error('Shell must be "bash" or "pwsh"');
-        return false;
-      }
-      config.defaultShell = value;
-      break;
+      log.warn('shell is no longer stored — the CLI does not call any LLM API.');
+      return true;
     default:
       log.error(`Unknown config key: ${key}`);
-      log.info('Available keys: api-key, model, shell');
+      log.info('Available keys: default-editor');
+      log.info('Note: api-key, model, and shell are no longer stored here — the CLI makes no LLM calls.');
       return false;
   }
-  
-  if (saveConfig(config)) {
-    log.success(`Set ${key} = ${key === 'api-key' ? '***' + value.slice(-4) : value}`);
-    return true;
-  }
+  if (saveConfig(config)) { log.success(`Set ${key} = ${value}`); return true; }
   return false;
 }
 
-// Remove a config value
 function unsetConfig(key) {
   const config = loadConfig();
-  
   switch (key) {
+    case 'default-editor':
+    case 'defaultEditor':
+      config.defaultEditor = null;
+      break;
     case 'api-key':
     case 'apiKey':
-      config.apiKey = null;
-      break;
+      log.warn('api-key was never stored persistently.');
+      return true;
     case 'model':
-      config.model = DEFAULT_CONFIG.model;
-      break;
+      log.warn('model is no longer stored — the CLI does not call any LLM API.');
+      return true;
     case 'shell':
-      config.defaultShell = null;
-      break;
+      log.warn('shell is no longer stored — the CLI does not call any LLM API.');
+      return true;
     default:
       log.error(`Unknown config key: ${key}`);
-      log.info('Available keys: api-key, model, shell');
+      log.info('Available keys: default-editor');
       return false;
   }
-  
-  if (saveConfig(config)) {
-    log.success(`Unset ${key}`);
-    return true;
-  }
+  if (saveConfig(config)) { log.success(`Unset ${key}`); return true; }
   return false;
 }
 
 module.exports = async function config(action, key, value) {
-  // No arguments = show config
-  if (!action) {
-    showConfig();
-    return;
-  }
-  
+  if (!action || action === 'show') { showConfig(); return; }
+
   switch (action) {
-    case 'show':
-      showConfig();
-      break;
     case 'set':
       if (!key || !value) {
         log.error('Usage: agentfile config set <key> <value>');
-        log.info('Available keys: api-key, model, shell');
+        log.info('Available keys: default-editor');
         process.exit(1);
       }
       setConfig(key, value);
@@ -141,7 +159,7 @@ module.exports = async function config(action, key, value) {
     case 'unset':
       if (!key) {
         log.error('Usage: agentfile config unset <key>');
-        log.info('Available keys: api-key, model, shell');
+        log.info('Available keys: default-editor');
         process.exit(1);
       }
       unsetConfig(key);
@@ -149,10 +167,8 @@ module.exports = async function config(action, key, value) {
     default:
       log.error(`Unknown action: ${action}`);
       log.info('Available actions: show, set, unset');
-      log.info('Usage: agentfile config [show|set|unset] [key] [value]');
       process.exit(1);
   }
 };
 
-// Export for other commands to use
 module.exports.loadConfig = loadConfig;

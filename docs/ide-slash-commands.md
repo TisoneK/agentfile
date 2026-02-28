@@ -87,10 +87,10 @@ Split on the first space after `/agentfile:`:
 **`create`** →
 1. Set `WORKFLOW_NAME` = arg 1
 2. Set `WORKFLOW_REQUEST` = `"Create a workflow named {arg1}. {remaining}"`
-3. Generate `RUN_ID` = current UTC timestamp `YYYY-MM-DDTHH-MM-SS`
-4. Set `ARTIFACT_DIR` = `artifacts/{WORKFLOW_NAME}/{RUN_ID}/`
-5. Run `workflows/workflow-creator` in IDE mode — pipeline writes all artifacts to `ARTIFACT_DIR`
-6. The workflow-creator pipeline handles: init → clarify → design → generate → review → promote
+3. Run `agentfile init-run {WORKFLOW_NAME}` in the terminal — read the printed `ARTIFACT_DIR=` line
+4. Run `workflows/workflow-creator` in IDE mode — pipeline writes all artifacts to `ARTIFACT_DIR`
+5. The workflow-creator pipeline handles: clarify → design → generate → review → promote
+6. At promote step, run `agentfile promote {ARTIFACT_DIR}` in the terminal
 
 **`run`** → Continue to STEP 3.
 
@@ -119,9 +119,9 @@ Split on the first space after `/agentfile:`:
 
 ### STEP 4B: CLI MODE EXECUTION
 
-- Execute `workflows/<workflow-name>/scripts/cli/run.sh` (Unix) or `run.ps1` (Windows)
-- Pass remaining args as input
-- Return the script's output
+- Run `agentfile run <workflow-name> --input "<args>"` in the terminal
+- The CLI initialises execution state; the IDE agent then executes each step
+- Use `agentfile status <workflow-name>` to check progress
 
 ---
 
@@ -153,14 +153,14 @@ Scan and return all `workflows/*/workflow.yaml` names and descriptions.
 
 ## Common Mistakes to Avoid
 
-❌ **WRONG:** Running `scripts/cli/run.sh` when in IDE mode
+❌ **WRONG:** Running shell scripts (`run.sh`, `register.sh`, `register.ps1`) directly
 ❌ **WRONG:** Ignoring `execution.preferred` and always defaulting one way
-❌ **WRONG:** Running `scripts/cli/register.sh` during `create` — use `scripts/ide/register.sh`
+❌ **WRONG:** Manually copying files into `workflows/` — always use `agentfile promote`
 ❌ **WRONG:** Treating `/agentfile:create` as just a `run` — it invokes `workflow-creator` with the name pre-bound
 
-✅ **CORRECT:** Check `execution.preferred` before every `run`
-✅ **CORRECT:** In IDE mode, only execute `scripts/ide/` shell scripts
-✅ **CORRECT:** `create` → workflow-creator pipeline → `scripts/ide/register.sh`
+✅ **CORRECT:** Use `agentfile init-run` to start artifact runs — never create directories manually
+✅ **CORRECT:** Use `agentfile promote` to ship workflows — never run register scripts
+✅ **CORRECT:** Use `agentfile approve`, `status`, `retry` for run management
 ✅ **CORRECT:** `list` → scan filesystem, no LLM needed
 
 ---
@@ -170,9 +170,10 @@ Scan and return all `workflows/*/workflow.yaml` names and descriptions.
 | Problem | Fix |
 |---------|-----|
 | Workflow not found | Check `workflows/<name>/workflow.yaml` exists |
-| `create` gets stuck asking for API key | You ran `scripts/cli/` — switch to `scripts/ide/register.sh` |
-| `create` writes to `outputs/` instead of `artifacts/` | Your `AGENTS.md` or `scripts/ide/instructions.md` is outdated — pull latest |
+| `create` gets stuck asking for API key | You ran a `scripts/cli/` shell script — use `agentfile promote` instead |
+| `create` writes to `outputs/` instead of `artifacts/` | Your `AGENTS.md` is outdated — pull latest |
 | `artifacts/` directory not found | Run `agentfile init` or create `artifacts/.gitkeep` manually |
+| `agentfile promote` says workflow already exists | Use `agentfile promote <dir> --force` after confirming with user |
 | `list` returns nothing | No `workflows/` directory or no `workflow.yaml` files found |
 | Missing execution field | Default to IDE mode |
 | Agent files missing | Continue with available agents, log a warning |

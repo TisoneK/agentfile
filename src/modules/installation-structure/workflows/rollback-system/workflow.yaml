@@ -1,0 +1,31 @@
+---
+name: rollback-system
+description: Restore project state if migration fails or issues arise
+web_bundle: true
+createWorkflow: './steps-c/step-01-detect.md'
+---
+
+# Rollback System Workflow
+
+**Goal:** Restore project state if migration fails or issues arise
+
+**Description:** Provides emergency restore capabilities to revert changes and recover previous installation state
+
+**Primary Agent:** Sam (Migration Specialist)
+
+## Workflow Steps
+
+| Step | Name | Goal |
+|------|------|------|
+| 1 | Detect Rollback Need | Identify failure conditions or user rollback request |
+| 2 | Validate Backup | Verify backup integrity and availability |
+| 3 | Rollback Execution | Restore files from backup |
+| 4 | Configuration Restore | Revert configuration changes |
+| 5 | Validation | Verify rollback success |
+| 6 | Cleanup | Remove failed migration artifacts |
+
+## Outputs
+
+- Rollback execution log
+- Restoration report
+- Status verification

@@ -1,225 +1,137 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8]
+inputDocuments:
+  - _bmad-output/planning-artifacts/prd.md
+  - docs/agentfile-init-spec-v1.md
 workflowType: 'architecture'
 project_name: 'agentfile'
 user_name: 'Tisone'
-date: '2026-02-25T00:12:00Z'
+date: '2026-02-27T08:35:00Z'
 status: 'complete'
-workflowType: 'architecture'
-project_name: 'agentfile'
-user_name: 'Tisone'
-date: '2026-02-25T00:12:00Z'
 ---
 
-# Architecture Decision Document
+# Architecture Decision Document - agentfile init & IDE Setup
 
-_This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
+_This document defines the architecture for the `agentfile init` command and IDE slash command integration system._
 
-## Project Context Analysis
+## Project Context
 
-### Requirements Overview
+**Focus:** Architecture for `agentfile init` command and IDE slash command setup system
 
-**Functional Requirements:**
-The JavaScript migration requires four core modules:
-- **File Operations Module**: Direct replacement for shell script operations (cp, mv, mkdir, rm) with async/await interface and comprehensive error handling
-- **Template Processing Module**: Variable substitution engine with conditional blocks, iteration, partial templates, and syntax validation
-- **State Management Module**: Workflow state persistence, step tracking, checkpoint/resume capabilities, and rollback functionality
-- **CLI Orchestration Module**: Command parsing, environment validation, progress tracking, and integration with existing workflow.yaml
+**Key Components:**
+- CLI interactive wizard for IDE selection
+- `.agentfile/` source of truth directory
+- IDE-specific wrapper generators (Windsurf, Cursor, KiloCode, GitHub Copilot, Cline)
+- Template system for IDE configurations
+- Idempotent re-run support
 
-**Non-Functional Requirements:**
-Critical NFRs that will drive architectural decisions:
-- **Backward Compatibility**: Existing Agentfile projects must continue working without modification - this is the primary constraint
-- **Performance**: File operations must equal or exceed shell script performance with minimal overhead
-- **Cross-Platform Support**: Single codebase for Windows, macOS, Linux with consistent behavior
-- **Developer Experience**: Better error messages and debugging information than current shell scripts
+## Core Architectural Decisions
 
-**Scale & Complexity:**
-- Primary domain: CLI tools/developer tooling
-- Complexity level: medium - significant refactoring but bounded scope
-- Estimated architectural components: 4 core modules + compatibility layer
+### 1. CWD Resolution
 
-### Technical Constraints & Dependencies
+**Decision:** Default to current working directory
 
-**Critical Constraints:**
-- Must preserve existing Agentfile architecture (agents, workflows, skills, configs) completely
-- JavaScript layer is purely mechanical execution, not guidance
-- Node.js 18+ compatibility required
-- No external runtime dependencies beyond Node.js
-- No breaking changes to workflow.yaml format
+- `agentfile init` = current directory
+- `agentfile init .` = current directory  
+- `agentfile init --here` = current directory
 
-**Dependencies:**
-- Existing shell script functionality must be replicated exactly
-- Current CLI interface (`agentfile` command) must remain unchanged
-- IDE slash command protocol must continue working
+### 2. .agentfile/ Population
 
-### Cross-Cutting Concerns Identified
+**Decision:** Copy template files from `cli/src/templates/agentfile/`
 
-**Backward Compatibility Layer:**
-- Hybrid execution mode during migration period
-- Graceful fallback to shell scripts if JavaScript utilities fail
-- Compatibility testing across existing Agentfile projects
+On first init:
+1. Create `.agentfile/` directory
+2. Copy all command definition files from templates
+3. These are the source of truth for all IDEs
 
-**Error Handling & Recovery:**
-- Standardized error response structure across all modules
-- Automatic retry for transient failures
-- Rollback capabilities for failed operations
-- Detailed logging for debugging
+### 3. IDE Wrapper Integration
 
-**Performance & Monitoring:**
-- Progress tracking for long-running operations
-- Performance benchmarking against shell scripts
-- Memory usage optimization for large file operations
+**Decision:** Generated files with relative paths
 
-## Starter Template Evaluation
+Each IDE gets generated wrapper files that reference `.agentfile/`:
+- Windsurf: `.windsurf/workflows/*.md`
+- Cursor: `.cursor/` config files
+- KiloCode: `.kilocode/modes/` config
+- GitHub Copilot: `.github/prompts/*.prompt.md`
+- Cline: `.clinerules`
 
-### Primary Technology Domain
+### 4. Idempotency / Re-run Logic
 
-CLI tool/Developer tooling with Node.js - specifically for migrating Agentfile shell scripts to JavaScript utilities
+**Decision:** Merge/preserve existing, add missing IDEs
 
-### Starter Options Considered
+When `agentfile init` runs again:
+- Preserve existing `.agentfile/` contents
+- Add any new command files if templates updated
+- Add missing IDE wrapper configs
+- Never overwrite existing IDE configs destructively
 
-**oclif (Open CLI Framework):**
-- Enterprise-grade framework with plugin architecture
-- Built-in testing helpers and auto-documentation
-- TypeScript support with minimal boilerplate
-- JSON output for CI/CD integration
-- Flexible command taxonomy
-- CLI generator for quick scaffolding
+### 5. Template System
 
-**Commander.js:**
-- Lightweight, minimal dependencies
-- Simple API for basic CLI needs
-- Good for single-purpose tools
-- Less opinionated structure
+**Decision:** Static files - copy as-is
 
-**Yargs:**
-- Low learning curve
-- Flexible customization
-- Good for small-to-medium CLIs
-- Built-in type conversion
+Template location: `cli/src/templates/<ide>/`
+- Templates are static markdown/config files
+- Copied directly without variable substitution
+- Each IDE has its own template subdirectory
 
-**Custom Approach:**
-- Maximum control over architecture
-- No framework dependencies
-- Tailored specifically to Agentfile needs
-- More development work
+## Project Structure
 
-### Selected Starter: Custom JavaScript Utilities Approach
-
-**Rationale for Selection:**
-Given that this is a migration project (not greenfield), and the primary constraint is preserving existing Agentfile architecture, a custom approach is most suitable. The JavaScript utilities need to integrate seamlessly with the existing `agentfile` command structure and maintain backward compatibility with shell scripts during the transition period.
-
-**Initialization Command:**
-
-```bash
-mkdir -p src/js-utils && npm init -y && npm install --save-dev jest
+```
+cli/src/
+├── commands/
+│   └── init.js           # Main init command handler
+├── prompts/
+│   └── ide-selector.js   # Interactive IDE selection
+├── installers/
+│   ├── index.js          # Installer orchestrator
+│   ├── windsurf.js       # Windsurf wrapper generator
+│   ├── cursor.js         # Cursor wrapper generator
+│   ├── kilocode.js       # KiloCode wrapper generator
+│   ├── github-copilot.js # GitHub Copilot generator
+│   └── cline.js          # Cline wrapper generator
+└── templates/
+    ├── agentfile/        # .agentfile/ template contents
+    │   ├── run.md
+    │   ├── create.md
+    │   └── ...
+    ├── windsurf/         # Windsurf templates
+    ├── cursor/           # Cursor templates
+    ├── kilocode/         # KiloCode templates
+    ├── github-copilot/   # GitHub Copilot templates
+    └── cline/           # Cline templates
 ```
 
-**Architectural Decisions Provided by Starter:**
+## Implementation Patterns
 
-**Language & Runtime:**
-- Pure JavaScript (Node.js 18+) for maximum compatibility
-- Optional TypeScript support for type safety in utilities
+### CLI Command Flow
 
-**Build Tooling:**
-- No build process required - direct Node.js execution
-- Simple package.json scripts for development
+1. Parse arguments (resolve CWD)
+2. Check if `.agentfile/` exists
+3. Run interactive IDE selector (inquirer)
+4. For each selected IDE, run corresponding installer
+5. Report success/failure
 
-**Testing Framework:**
-- Jest for unit testing file operations
-- Integration tests for shell script compatibility
+### Installer Pattern
 
-**Code Organization:**
-- Modular structure: `src/js-utils/file-ops.js`, `template-processor.js`, `state-manager.js`, `cli-orchestrator.js`
-- Compatibility layer: `src/compatibility/shell-bridge.js`
+Each IDE installer:
+1. Check if IDE config directory exists
+2. Generate wrapper files pointing to `.agentfile/`
+3. Handle idempotency (merge vs overwrite)
+4. Report results
 
-**Development Experience:**
-- Simple npm scripts for testing and development
-- No complex build configuration
-- Focus on utility functions rather than CLI framework
+### File Operations
 
-**Note:** Project initialization using this command should be the first implementation story.
+- Use existing `src/js-utils/file-ops.js` for file operations
+- Create directories with proper permissions
+- Handle existing files gracefully
 
----
+## Summary
 
-## Critical Decision: Migration Strategy
+Key architectural decisions for `agentfile init`:
+1. **CWD:** Default to current directory
+2. **Population:** Copy templates to `.agentfile/`
+3. **IDE Integration:** Generated wrapper files with relative paths
+4. **Idempotency:** Merge/preserve existing configs
+5. **Templates:** Static files, copy as-is
 
-**Decision:** Big Bang Migration
-
-**Rationale:** Complete replacement of shell scripts with JavaScript utilities for a cleaner codebase. No hybrid period - once JavaScript utilities are ready, they fully replace shell scripts.
-
-**Implementation:**
-- Phase 1: Create all JavaScript utility modules in parallel
-- Phase 2: Comprehensive testing of all utilities
-- Phase 3: Single switchover - all shell scripts replaced with JS equivalents
-- Phase 4: Remove shell script files entirely
-
-**Benefits:**
-- Cleaner codebase with no dual implementation
-- No compatibility layer maintenance
-- Faster cross-platform consistency
-
-**Risks:**
-- Higher upfront testing requirements
-- No gradual rollback option
-- All-or-nothing transition
-
----
-
-## Next Decision: Error Handling Strategy
-
-Since we're doing Big Bang (no shell script fallback), errors should be handled with:
-
-**Standardized Error Response Structure:** All utilities return consistent error objects with:
-- `success`: boolean
-- `error.code`: Standardized error codes
-- `error.message`: Human-readable description
-- `error.details`: Operation context
-
-**Recovery Mechanisms:**
-- Automatic retry for transient failures
-- Checkpoint/resume for interrupted workflows
-- Rollback capabilities
-- Detailed logging for debugging
-
-With Big Bang migration, there's no fallback to shell scripts - the JavaScript utilities must handle all errors internally.
-
----
-
-## Critical Decision: State Persistence Format
-
-**Decision:** YAML Files
-
-**Rationale:** Human-readable format like JSON, but better for version control merge conflicts. Agentfile already uses YAML extensively, maintaining consistency.
-
-**Implementation:**
-- State files stored in `.agentfile/state/` directory
-- Each workflow gets `workflow-id.yaml` state file
-- Includes: step status, timestamps, variables, history
-- Easy to inspect, debug, and manually edit if needed
-
----
-
-## Critical Decision: Package Distribution
-
-**Decision:** Bundled with Agentfile
-
-**Rationale:** Utilities ship as part of Agentfile installation. No npm dependency required - simplifies deployment and reduces external dependencies.
-
-**Implementation:**
-- JavaScript utilities included in Agentfile distribution
-- Single package for end users
-- No additional installation steps
-- Easier for enterprise environments with strict dependency policies
-
----
-
-## Summary & Next Steps
-
-Key architectural decisions recorded:
-1. **Migration Strategy:** Big Bang - complete shell script replacement
-2. **State Persistence:** YAML files
-3. **Package Distribution:** Bundled with Agentfile
-4. **Error Handling:** Fail-fast with internal recovery mechanisms
-
-The architecture document is now ready for implementation planning.
+The architecture is ready for implementation.

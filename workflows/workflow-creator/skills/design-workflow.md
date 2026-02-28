@@ -33,6 +33,10 @@ At minimum, every workflow needs:
 - `run.sh` — full orchestration in Bash
 - `run.ps1` — full orchestration in PowerShell
 
+**JavaScript workflows (recommended):** Use js-utils integration for robust, cross-platform compatibility:
+- `run.js` — JavaScript orchestration using js-utils modules (state-manager, file-ops, cli-parser, etc.)
+- All JavaScript scripts MUST import from `src/js-utils/` instead of manual implementations
+
 Additional scripts for: file registration, cleanup, validation.
 
 ### Step 6 — Build the file manifest
@@ -43,6 +47,7 @@ List every file that will be generated, with its path relative to the workflow r
 - Each agent should be replaceable (clear input/output contract)
 - Skills should be generic enough to reuse across workflows
 - Scripts should be readable — prioritize clarity over cleverness
+- **JavaScript workflows MUST use js-utils modules** - no manual file operations, state management, or CLI parsing
 - Always include error handling in the design
 
 ---

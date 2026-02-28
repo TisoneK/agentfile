@@ -1,0 +1,41 @@
+{
+  "commands": [
+    {
+      "name": "run",
+      "description": "Execute an existing workflow",
+      "usage": "agentfile run <workflow-name> [args]",
+      "example": "agentfile run my-workflow --input 'hello'"
+    },
+    {
+      "name": "create",
+      "description": "Create a new workflow using the workflow-creator pipeline",
+      "usage": "agentfile create <workflow-name> <description>",
+      "example": "agentfile create my-workflow 'A workflow that does X'"
+    },
+    {
+      "name": "list",
+      "description": "List all available workflows",
+      "usage": "agentfile list",
+      "example": "agentfile list"
+    },
+    {
+      "name": "init",
+      "description": "Initialize a new Agentfile project",
+      "usage": "agentfile init [options]",
+      "example": "agentfile init --name my-project --ide cursor"
+    },
+    {
+      "name": "validate",
+      "description": "Validate a workflow for correctness",
+      "usage": "agentfile validate <workflow-name>",
+      "example": "agentfile validate my-workflow"
+    },
+    {
+      "name": "status",
+      "description": "Show workflow execution status and history",
+      "usage": "agentfile status [workflow-name]",
+      "example": "agentfile status"
+    }
+  ],
+  "version": "1.0.0"
+}

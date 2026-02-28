@@ -5,6 +5,14 @@ Teach the Generator how to write complete, robust Bash and PowerShell orchestrat
 
 ---
 
+## JavaScript vs Bash/PowerShell
+
+**For JavaScript scripts (`run.js`), prefer using js-utils** from `src/js-utils/` instead of manual implementations. See `generate-dual-scripts.md` for the recommended js-utils-based template.
+
+This file covers **Bash and PowerShell scripts only**. For JavaScript, use the patterns in `generate-dual-scripts.md`.
+
+---
+
 ## Step 1 — Think Before You Write
 
 Before generating any script, answer these questions from the workflow design:
@@ -188,7 +196,62 @@ main "$@"
 
 ---
 
-## Step 4 — PowerShell Template
+## Step 4 — JavaScript Template (Deprecated - Use js-utils)
+
+**This manual JavaScript template is DEPRECATED.** Use the js-utils template from `generate-dual-scripts.md` instead.
+
+The manual template below is provided for reference only. All new JavaScript scripts MUST use js-utils.
+
+```javascript
+// DEPRECATED: Use js-utils template instead
+// See generate-dual-scripts.md for the required js-utils implementation
+
+// Manual implementation examples (DO NOT USE FOR NEW WORKFLOWS):
+// - Manual state management with fs.writeFileSync
+// - Manual file operations with fs.readFileSync
+// - Manual argument parsing with process.argv
+// - Manual template processing with string replacement
+
+// All of the above should use js-utils modules instead:
+// - state-manager for state persistence
+// - file-ops for file operations  
+// - cli-parser for argument parsing
+// - template-processor for template processing
+```
+
+---
+
+## Step 5 — Legacy Support and Migration
+
+### For Existing Workflows
+Existing workflows with manual JavaScript implementations continue to work but should be migrated to js-utils for consistency and robustness.
+
+### Migration Path
+1. Replace manual `fs` operations with `file-ops` module
+2. Replace manual state management with `state-manager` module
+3. Replace manual argument parsing with `cli-parser` module
+4. Replace manual template processing with `template-processor` module
+
+### Backward Compatibility
+- Shell scripts (`run.sh`, `run.ps1`) remain unchanged
+- Manual JavaScript scripts continue to work
+- New workflows MUST use js-utils
+
+---
+
+## Step 6 — JavaScript vs Bash/PowerShell Summary
+
+| Language | Recommended Approach | Status |
+|----------|---------------------|---------|
+| **JavaScript** | **js-utils library** (required) | Modern standard |
+| **Bash** | Manual implementation | Legacy support |
+| **PowerShell** | Manual implementation | Legacy support |
+
+**Rule**: For any new JavaScript script generation, always use the js-utils template from `generate-dual-scripts.md`. Never use manual implementations.
+
+---
+
+## Step 7 — PowerShell Template (Unchanged)
 
 ```powershell
 #!/usr/bin/env pwsh
@@ -327,7 +390,7 @@ Write-Log "✅ Complete. Run: $($script:RunId) | Outputs: $($script:StateDir)"
 
 ---
 
-## Step 5 — Additional Script Patterns
+## Step 6 — Additional Script Patterns
 
 ### Watch Script (`watch.sh`)
 ```bash
@@ -361,7 +424,7 @@ echo "Done: $SUCCESS success, $FAIL failed"
 
 ---
 
-## Step 6 — Key Patterns to Always Follow
+## Step 7 — Key Patterns to Always Follow
 
 - Execution state is mandatory — every run.sh must implement init_state/check_gate/step_start/step_complete/step_fail
 - `--resume` flag in main() makes resume automatic — no separate resume.sh needed
@@ -369,5 +432,5 @@ echo "Done: $SUCCESS success, $FAIL failed"
 - State file lives at `workflows/<n>/outputs/<run-id>/execution-state.json`
 - Always resolve paths relative to `$SCRIPT_DIR` — never assume CWD
 - System prompts load `project.md` + `AGENTS.md` + agent file
-- PowerShell script is functionally equivalent to Bash — not a stub
+- **Recommendation**: Use JavaScript (Step 4) for cross-platform compatibility. PowerShell and Bash are kept for legacy compatibility.
 - Meaningful `custom` fields per step — not empty `{}`

@@ -1,0 +1,8 @@
+code: ide-integration
+name: IDE Integration Tools
+version: 1.0.0
+description: Code Oracle agent for IDE slash command integration
+type: agents
+author:
+  name: BMAD User
+  created: 2026-02-26

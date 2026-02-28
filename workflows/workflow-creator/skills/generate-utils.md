@@ -5,6 +5,85 @@ Teach the Generator how to identify, decompose, and write `scripts/utils/` scrip
 
 ---
 
+## Using js-utils for JavaScript Utilities (Required)
+
+**For JavaScript utility scripts, you MUST use the js-utils library** from `src/js-utils/` instead of writing manual implementations. This eliminates code duplication and provides robust, tested utilities:
+
+| js-utils Module | Purpose | Replaces Manual Code |
+|----------------|---------|---------------------|
+| [`file-ops`](../../src/js-utils/file-ops.js) | File operations (copy, read, write, ensure directory) | `fs.readFileSync`, `fs.writeFileSync`, `fs.copyFileSync` |
+| [`template-processor`](../../src/js-utils/template-processor.js) | Template variable substitution | Manual string replacement |
+| [`env-validator`](../../src/js-utils/env-validator.js) | Environment validation | Manual checks |
+| [`cli-parser`](../../src/js-utils/cli-parser.js) | Argument parsing for utility scripts | Manual `process.argv` handling |
+
+### Standard JavaScript Utility Template (js-utils Required)
+
+```javascript
+#!/usr/bin/env node
+'use strict';
+
+const path = require('path');
+
+// ── js-utils Imports ────────────────────────────────────────────────────────────
+const projectRoot = path.resolve(__dirname, '../../../..');
+const jsUtilsPath = path.join(projectRoot, 'src/js-utils');
+
+const fileOps = require(path.join(jsUtilsPath, 'file-ops'));
+const templateProcessor = require(path.join(jsUtilsPath, 'template-processor'));
+
+function main() {
+  // Parse arguments using cli-parser
+  const args = process.argv.slice(2);
+  if (args.length < 2) {
+    console.error('Usage: node utility.js <input> <output> [options]');
+    process.exit(1);
+  }
+  
+  const [inputPath, outputPath, ...options] = args;
+  
+  try {
+    // Use file-ops to read input
+    const readResult = fileOps.readFile(inputPath);
+    if (!readResult.success) {
+      console.error(`Error reading input: ${readResult.error.message}`);
+      process.exit(1);
+    }
+    
+    // Process content (example: template processing)
+    const templateResult = templateProcessor.processTemplate(
+      readResult.data,
+      { 
+        VAR_NAME: 'value',
+        // Add other variables as needed
+      }
+    );
+    
+    if (!templateResult.success) {
+      console.error(`Template processing error: ${templateResult.error.message}`);
+      process.exit(1);
+    }
+    
+    // Use file-ops to write output
+    const writeResult = fileOps.writeFile(outputPath, templateResult.output);
+    if (!writeResult.success) {
+      console.error(`Error writing output: ${writeResult.error.message}`);
+      process.exit(1);
+    }
+    
+    console.log(`Processed: ${inputPath} -> ${outputPath}`);
+  } catch (error) {
+    console.error(`Utility failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+main();
+```
+
+**IMPORTANT**: All JavaScript utility scripts MUST use js-utils modules. No manual file operations or template processing allowed.
+
+---
+
 ## Step 1 — What Belongs in utils/
 
 A utility script is needed whenever a workflow step involves a discrete, repeatable operation that:
