@@ -1,6 +1,6 @@
 {
   "name": "agentfile",
-  "version": "2.0.0-alpha",
+  "version": "0.2.0-alpha",
   "description": "**Agentfile is workflow-as-files for AI agents.**",
   "main": "index.js",
   "directories": {
